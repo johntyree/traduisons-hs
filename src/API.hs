@@ -2,7 +2,6 @@
 
 module API ( getToken
            , newState
-           , unsafeNewState
            , detectLanguage
            , translate
            , runTraduisons
