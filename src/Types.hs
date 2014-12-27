@@ -2,16 +2,19 @@
 
 module Types where
 
+import Control.Monad.Error
+import Control.Monad.Reader
 import Control.Applicative
-import Control.Monad
 import Data.Aeson
 import Data.ByteString.Char8
+import Data.IORef
 
-data MyMemoryResponse = MyMemoryResponse
-  { mmrReponseCode :: Integer
-  , mmrTranslation :: String
-  }
-  deriving (Show, Eq)
+type Traduisons = ErrorT String (ReaderT TraduisonsState IO)
+type TraduisonsState = IORef TokenData
+
+-- runTraduisons r = either Left runReaderT . runErrorT
+runTraduisons :: b -> ErrorT e (ReaderT b m) a -> m (Either e a)
+runTraduisons r = flip runReaderT r . runErrorT
 
 data TokenResponse = TokenResponse
   { trToken :: String
@@ -21,17 +24,9 @@ data TokenResponse = TokenResponse
   } deriving (Show, Eq)
 
 data TokenData = TokenData
-  { trExpiresAt :: Seconds
+  { tdExpiresAt :: Seconds
   , tdToken :: TokenResponse
   } deriving (Show, Eq)
-
-instance FromJSON MyMemoryResponse where
-  parseJSON (Object o) = do
-    let (.:>) p key = p >>= (.: key)
-    stat <- o .: "responseStatus"
-    trans <- o .: "responseData" .:> "translatedText"
-    return $ MyMemoryResponse stat trans
-  parseJSON _ = mzero
 
 instance FromJSON TokenResponse where
   parseJSON (Object o) = do
@@ -44,6 +39,9 @@ instance FromJSON TokenResponse where
 
 data Message a = Message {msgLanguage :: Language, msgBody :: a}
   deriving (Show, Eq)
+
+mkMessage :: String -> a -> Message a
+mkMessage = Message . Language
 
 newtype Language = Language {getLanguage :: String}
   deriving (Show, Eq)
