@@ -58,15 +58,17 @@ executable traduisons
 
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.7 && <4.8,
-                       HTTP,
                        aeson,
                        bytestring,
+                       HTTP,
                        http-client,
                        http-client-tls,
                        http-types,
-                       process,
                        mtl,
-                       time
+                       process,
+                       readline,
+                       time,
+                       utf8-string
 
   -- Directories containing source files.
   hs-source-dirs:      src

@@ -5,6 +5,7 @@ module Util where
 import Control.Applicative
 import Control.Monad.Error
 import Data.List
+import Data.Maybe
 import Data.Time.Clock.POSIX
 import Network.HTTP.Client as N
 import Network.HTTP.Types
@@ -63,3 +64,7 @@ systemCurl url httpMethod hdrs formData _ = do
                    in throwError err
   let args = "-s" : url : map B.unpack (argHdrs ++ argData)
   B.pack <$> liftIO (readProcess "curl" args "")
+
+-- Remove the BOM from Unicode string
+stripBOM :: String -> String
+stripBOM s = fromMaybe s (stripPrefix "\65279" s)

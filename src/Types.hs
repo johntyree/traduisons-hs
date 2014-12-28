@@ -9,12 +9,15 @@ import Data.Aeson
 import Data.ByteString.Char8
 import Data.IORef
 
-type Traduisons = ErrorT String (ReaderT TraduisonsState IO)
-type TraduisonsState = IORef TokenData
+type Traduisons = ReaderT TraduisonsState (ErrorT String IO)
+type TraduisonsState = TokenRef
+newtype TokenRef = TokenRef { unTokenRef :: IORef TokenData }
 
--- runTraduisons r = either Left runReaderT . runErrorT
-runTraduisons :: b -> ErrorT e (ReaderT b m) a -> m (Either e a)
-runTraduisons r = flip runReaderT r . runErrorT
+instance Show TokenRef where
+  show = const "<TokenRef: API token reference>"
+
+runTraduisons :: b -> ReaderT b (ErrorT e m) a -> m (Either e a)
+runTraduisons r = runErrorT . flip runReaderT r
 
 data TokenResponse = TokenResponse
   { trToken :: String
@@ -37,10 +40,10 @@ instance FromJSON TokenResponse where
     return $ TokenResponse token scope tokenType expiry
   parseJSON _ = mzero
 
-data Message a = Message {msgLanguage :: Language, msgBody :: a}
+data Message = Message {msgLanguage :: Language, msgBody :: String}
   deriving (Show, Eq)
 
-mkMessage :: String -> a -> Message a
+mkMessage :: String -> String -> Message
 mkMessage = Message . Language
 
 newtype Language = Language {getLanguage :: String}
@@ -51,3 +54,20 @@ type Seconds = Integer
 type FormData = [(ByteString, Maybe ByteString)]
 
 type URL = String
+
+data AppState = AppState
+  { asFromLang :: Language
+  , asToLang :: Language
+  , asHistory :: [Command]
+  , asTraduisonsState :: TraduisonsState
+  } deriving Show
+
+instance Eq AppState where
+  AppState f l _ _ == AppState f' l' _ _ = f == f' && l == l'
+
+data Command = SetFromLanguage String
+             | SetToLanguage String
+             | Translate String
+             | SwapLanguages
+             | Exit
+  deriving (Show, Eq)

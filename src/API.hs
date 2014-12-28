@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module API ( getToken
-           , newState
+module API ( newState
            , detectLanguage
            , translate
            , runTraduisons
-           , execTraduisons
+           , authorizedRequest
            ) where
 
 import Control.Applicative
@@ -17,6 +16,7 @@ import Data.List
 import Network.HTTP.Client as N
 import Network.HTTP.Client.TLS as N
 import Network.HTTP.Types
+import qualified Data.ByteString.UTF8 as B
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 
@@ -25,20 +25,14 @@ import Types
 import Util
 
 
-execTraduisons :: Traduisons a -> IO (Either String a)
-execTraduisons action = newState >>= either reraise run
-  where
-    reraise = return . throwError
-    run = (`runTraduisons` action)
-
 detectLanguage :: String -> Traduisons Language
 detectLanguage s = do
   let url = "http://api.microsofttranslator.com/V2/Ajax.svc/Detect"
       urlData = [("text", s)]
-  language <- traduisonsRequest url urlData
+  language <- authorizedRequest url urlData
   return $ Language language
 
-translate :: Language -> Message String -> Traduisons (Message String)
+translate :: Language -> Message -> Traduisons Message
 translate targetLanguage message = do
   let url = "http://api.microsofttranslator.com/V2/Ajax.svc/Translate"
       fromLang = getLanguage . msgLanguage $ message
@@ -46,31 +40,33 @@ translate targetLanguage message = do
       urlData = [ ("from", fromLang)
                 , ("to", toLang)
                 , ("text", msgBody message) ]
-  translatedMessage <- traduisonsRequest url urlData
+  translatedMessage <- authorizedRequest url urlData
   return $ Message targetLanguage translatedMessage
 
-traduisonsRequest :: URL -> [(B.ByteString, String)] -> Traduisons String
-traduisonsRequest url urlData' = do
-  let wrap = Just . B.pack
+authorizedRequest :: URL -> [(B.ByteString, String)] -> Traduisons String
+authorizedRequest url urlData' = do
+  let wrap = Just . B.fromString
       headers token = [("Authorization", B.unwords ["Bearer", B.pack token])]
-      urlData = ("appId", Nothing) : map (fmap wrap) urlData'
+      urlData token = fmap wrap <$> ("appId", "Bearer " ++ token) : urlData'
   man <- liftIO $ N.newManager N.defaultManagerSettings
-  tokenRef <- lift ask
+  tokenRef <- unTokenRef <$> ask
   token <- (trToken . tdToken) <$> liftIO (readIORef tokenRef)
-  result <- strip . B.unpack <$> curl url GET (headers token) urlData man
+  let hdrs = headers token
+      formData = urlData token
+      decodeAndStrip = read . stripBOM . B.toString
+  result <- lift $ decodeAndStrip <$> curl url GET hdrs formData man
   checkExpired result
 
-newState :: IO (Either String TraduisonsState)
-newState = runTraduisons undefined getToken
-
-getToken :: Traduisons TraduisonsState
-getToken = do
+newState :: ErrorT String IO TraduisonsState
+newState = do
   man <- liftIO $ N.newManager N.tlsManagerSettings
   clientSecret <- liftIO readClientSecret
-  bytes <- curl tokenURL POST headers (tokenRequestData clientSecret) man
-  tokR <- liftEither (parseTokenResponse bytes)
+  let formData = tokenRequestData clientSecret
+  bytes <- curl tokenURL POST headers formData man
   now <- liftIO currentTime
-  liftIO . newIORef $ TokenData (trExpiresIn tokR + now) tokR
+  tokenResponse <- liftEither $ parseTokenResponse bytes
+  let tokenData = TokenData (trExpiresIn tokenResponse + now) tokenResponse
+  liftIO $ TokenRef <$> newIORef tokenData
   where
     headers = [("User-Agent", "traduisons/2.0.0")]
     tokenRequestData cs = [
@@ -90,8 +86,3 @@ checkExpired :: String -> Traduisons String
 checkExpired s = if "ArgumentException:" `isPrefixOf` s
                  then throwError s
                  else return s
-
-strip :: String -> String
-strip ('\239':'\187':'\191':txt) = read txt
-strip ('\255':txt) = read txt
-strip txt = txt
