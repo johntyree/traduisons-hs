@@ -47,15 +47,15 @@ runCommands appState cmds = do
 
 renderAppState :: AppState -> String
 renderAppState (AppState (Language fL) (Language tL) _ _) =
-  fL ++ "|" ++ tL ++ "> "
+  fL ++ "|" ++ tL ++ ": "
 
-parse :: String -> [Command]
-parse ('/':s) = SwapLanguages : parse s
-parse "\EOT"  = [Exit]
-parse ""      = []
-parse ('|':s) = [SetToLanguage s]
-parse s
-  | "/" `isSuffixOf` s = SwapLanguages : parse (init s)
+parseInput :: String -> [Command]
+parseInput ('/':s) = SwapLanguages : parseInput s
+parseInput "\EOT"  = [Exit]
+parseInput ""      = []
+parseInput ('|':s) = [SetToLanguage s]
+parseInput s
+  | "/" `isSuffixOf` s = SwapLanguages : parseInput (init s)
   | "|" `isInfixOf` s = let (from, '|':to) = break (== '|') s
                             f c l = [c l | not (null l)]
                         in f SetFromLanguage from ++ f SetToLanguage to
