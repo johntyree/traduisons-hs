@@ -1,2 +1,3 @@
 srcdeps/
 SECRET
+cabal.sandbox.config
