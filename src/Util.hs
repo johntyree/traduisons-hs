@@ -15,7 +15,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 
 import Types
 
-liftEither :: (Error e, Monad m) => Either e a -> ErrorT e m a
+liftEither :: (Error e, Monad m, MonadError e (t e m)) => Either e a -> t e m a
 liftEither = either throwError return
 
 currentTime :: IO Seconds
@@ -48,8 +48,8 @@ nativeCurl url httpMethod hdrs formData man = do
   return . BL.toStrict . responseBody $ resp
 
 -- Working around broken TLS (https://github.com/vincenthz/hs-tls/issues/87)
-systemCurl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header] -> FormData
-           -> Manager -> ErrorT String m B.ByteString
+systemCurl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header]
+           -> FormData -> Manager -> ErrorT String m B.ByteString
 systemCurl url httpMethod hdrs formData _ = do
   let dataAsArg = [B.concat [a, "=", b] | (a, Just b) <- formData]
       addFlag flag argList = flag : intersperse flag argList
