@@ -6,6 +6,7 @@ import Control.Applicative
 import Control.Monad.Error
 import Control.Monad.State
 import Data.List
+import Data.Maybe
 import System.Console.Readline (addHistory, readline)
 
 import API
@@ -15,16 +16,27 @@ import Types
 main :: IO ()
 main = createAppState >>= loop
   where
-    render msg = "         " ++ msgBody msg
     loop appState = do
-      input <- readEvalPrint (renderAppState appState) parse
+      let promptString = renderAppState appState
+      input <- readEvalPrint promptString parseInput
       case input of
-        Nothing -> print Exit
+        Nothing -> exitApp
         Just commands -> do
-          result <- runCommands (Just appState) commands
-          case result of
-            Left err -> print err
-            Right (msg, s) -> maybe (return ()) (putStrLn . render) msg >> loop s
+          maybeNewState <- interpretCommands (Just appState) commands
+          loop $ fromMaybe appState maybeNewState
+
+exitApp :: IO ()
+exitApp = return ()
+
+interpretCommands :: Maybe AppState -> [Command] -> IO (Maybe AppState)
+interpretCommands appState commands = do
+  let render = msgBody
+  result <- runCommands appState commands
+  case result of
+    Left err -> putStrLn err >> return Nothing
+    Right (msg, s) -> do
+      when (isJust msg) $ putStrLn . render . fromJust $ msg
+      return $ Just s
 
 readEvalPrint :: String -> (String -> a) -> IO (Maybe a)
 readEvalPrint prompt f = do
