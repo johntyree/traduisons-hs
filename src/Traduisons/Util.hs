@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Util where
+module Traduisons.Util where
 
 import Control.Applicative
 import Control.Monad.Error
@@ -13,7 +13,7 @@ import System.Process
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 
-import Types
+import Traduisons.Types
 
 liftEither :: (Error e, Monad m, MonadError e (t e m)) => Either e a -> t e m a
 liftEither = either throwError return

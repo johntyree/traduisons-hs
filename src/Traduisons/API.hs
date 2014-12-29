@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module API ( newState
-           , detectLanguage
-           , translate
-           , runTraduisons
-           , authorizedRequest
-           ) where
+module Traduisons.API ( newState
+                      , detectLanguage
+                      , translate
+                      , runTraduisons
+                      , authorizedRequest
+                      ) where
 
 import Control.Applicative
 import Control.Monad.Error
@@ -20,9 +20,9 @@ import qualified Data.ByteString.UTF8 as B
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 
-import Resources
-import Types
-import Util
+import Traduisons.Resources
+import Traduisons.Types
+import Traduisons.Util
 
 
 detectLanguage :: String -> Traduisons Language

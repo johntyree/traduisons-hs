@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Resources where
+module Traduisons.Resources where
 
 import qualified Data.ByteString.Char8 as B
 

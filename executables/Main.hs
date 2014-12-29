@@ -9,8 +9,8 @@ import Data.List
 import Data.Maybe
 import System.Console.Readline (addHistory, readline)
 
-import API
-import Types
+import Traduisons.API
+import Traduisons.Types
 
 
 main :: IO ()

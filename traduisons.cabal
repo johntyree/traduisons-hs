@@ -13,10 +13,10 @@ name:                traduisons
 version:             0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:
+synopsis: A library and executable for language translation.
 
 -- A longer description of the package.
--- description:
+description: Ugh. See the README.
 
 -- The license under which the package is released.
 license:             BSD3
@@ -46,33 +46,44 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 
-executable traduisons
+source-repository head
+    type: git
+    location: https://github.com/johntyree/traduisons-hs.git
+
+
+executable main
   -- .hs or .lhs file containing the Main module.
   main-is:             Main.hs
-
-  -- Modules included in this executable, other than Main.
-  other-modules:      API, Resources, Types, Util
-
+  Ghc-Options:        -Wall
+  build-depends:       base >=4.7 && <4.8
+                     , mtl
+                     , readline
+                     , traduisons
+  hs-source-dirs:      executables
+  default-language:    Haskell2010
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    OverloadedStrings
 
-  -- Other library packages from which modules are imported.
-  build-depends:       base >=4.7 && <4.8,
-                       aeson,
-                       bytestring,
-                       HTTP,
-                       http-client,
-                       http-client-tls,
-                       http-types,
-                       mtl,
-                       process,
-                       readline,
-                       time,
-                       utf8-string
-
-  -- Directories containing source files.
-  hs-source-dirs:      src
-
-  -- Base language which the package is written in.
-  default-language:    Haskell2010
-
+library
+    hs-source-dirs:     src
+    default-language:   Haskell2010
+    exposed-modules:    Traduisons.API
+                      , Traduisons.Util
+                      , Traduisons.Resources
+                      , Traduisons.Types
+    -- other-modules:
+    other-extensions:  OverloadedStrings
+                     , GeneralizedNewtypeDeriving
+    Ghc-Options:        -Wall
+    build-depends:     base >=4.7 && <4.8
+                     , aeson
+                     , bytestring
+                     , HTTP
+                     , http-client
+                     , http-client-tls
+                     , http-types
+                     , mtl
+                     , process
+                     , readline
+                     , time
+                     , utf8-string

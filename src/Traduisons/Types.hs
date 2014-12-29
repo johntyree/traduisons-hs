@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Types where
+module Traduisons.Types where
 
 import Control.Monad.Error
 import Control.Monad.Reader
