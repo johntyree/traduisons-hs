@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Types where
 
@@ -9,15 +10,22 @@ import Data.Aeson
 import Data.ByteString.Char8
 import Data.IORef
 
-type Traduisons = ReaderT TraduisonsState (ErrorT String IO)
+newtype Traduisons a = Traduisons {
+  unTraduisons :: ReaderT TraduisonsState (ErrorT String IO) a }
+  deriving (Functor, Applicative, Monad, MonadIO, MonadReader TraduisonsState,
+            MonadError String)
+
 type TraduisonsState = TokenRef
 newtype TokenRef = TokenRef { unTokenRef :: IORef TokenData }
 
+liftErrorT :: ErrorT String IO a -> Traduisons a
+liftErrorT = Traduisons . lift
+
+runTraduisons :: TraduisonsState -> Traduisons a -> IO (Either String a)
+runTraduisons = flip $ (runErrorT .) . runReaderT . unTraduisons
+
 instance Show TokenRef where
   show = const "<TokenRef: API token reference>"
-
-runTraduisons :: b -> ReaderT b (ErrorT e m) a -> m (Either e a)
-runTraduisons r = runErrorT . flip runReaderT r
 
 data TokenResponse = TokenResponse
   { trToken :: String

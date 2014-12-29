@@ -54,7 +54,7 @@ authorizedRequest url urlData' = do
   let hdrs = headers token
       formData = urlData token
       decodeAndStrip = read . stripBOM . B.toString
-  result <- lift $ decodeAndStrip <$> curl url GET hdrs formData man
+  result <- liftErrorT $ decodeAndStrip <$> curl url GET hdrs formData man
   checkExpired result
 
 newState :: ErrorT String IO TraduisonsState
