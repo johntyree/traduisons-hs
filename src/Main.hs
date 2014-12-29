@@ -89,7 +89,7 @@ runCommand_ (Translate rawMsg) = go (1 :: Int)
       case translation of
         Left err ->
           if n > 0
-          then liftIO (print err) >> renewToken >> go 0
+          then renewToken >> go 0
           else throwError err
         Right msg -> return $ Just msg
 runCommand_ Exit = throwError "exit"
