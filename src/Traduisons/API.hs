@@ -27,14 +27,14 @@ import Traduisons.Util
 
 detectLanguage :: String -> Traduisons Language
 detectLanguage s = do
-  let url = "http://api.microsofttranslator.com/V2/Ajax.svc/Detect"
+  let url = detectionURL
       urlData = [("text", s)]
   language <- authorizedRequest url urlData
   return $ Language language
 
 translate :: Language -> Message -> Traduisons Message
 translate targetLanguage message = do
-  let url = "http://api.microsofttranslator.com/V2/Ajax.svc/Translate"
+  let url = translationURL
       fromLang = getLanguage . msgLanguage $ message
       toLang = getLanguage targetLanguage
       urlData = [ ("from", fromLang)
@@ -73,7 +73,7 @@ newState = do
       ("client_id", Just clientID),
       ("client_secret", Just cs),
       ("grant_type", Just "client_credentials"),
-      ("scope", Just translationDomain)]
+      ("scope", Just $ B.pack apiDomain)]
 
 parseTokenResponse :: B.ByteString -> Either String TokenResponse
 parseTokenResponse jsonBytes = fromJSONBytes $ BL.fromStrict jsonBytes
