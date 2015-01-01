@@ -55,10 +55,13 @@ source-repository head
 executable main
   -- .hs or .lhs file containing the Main module.
   main-is:             Main.hs
-  Ghc-Options:        -Wall
+  other-modules:       UI.QML, Paths_traduisons
+  ghc-options:        -Wall -threaded
   build-depends:       base >=4.7 && <4.8
+                     , hsqml
                      , mtl
                      , readline
+                     , text
                      , traduisons
   hs-source-dirs:      executables
   default-language:    Haskell2010

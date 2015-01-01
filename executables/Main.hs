@@ -12,9 +12,16 @@ import System.Console.Readline (addHistory, readline)
 import Traduisons.API
 import Traduisons.Types
 
+import qualified UI.QML as Qui
 
 main :: IO ()
-main = createAppState >>= loop
+main = mainGUI
+
+mainGUI :: IO ()
+mainGUI = Qui.main
+
+mainCLI :: IO ()
+mainCLI = createAppState >>= loop
   where
     loop appState = do
       let promptString = renderAppState appState
