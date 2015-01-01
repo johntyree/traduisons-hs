@@ -78,7 +78,7 @@ library
     -- other-modules:
     other-extensions:  OverloadedStrings
                      , GeneralizedNewtypeDeriving
-    Ghc-Options:        -Wall
+    ghc-options:       -Wall -threaded
     build-depends:     base >=4.7 && <4.8
                      , aeson
                      , bytestring
@@ -97,7 +97,7 @@ test-suite test
     type:               exitcode-stdio-1.0
     hs-source-dirs:     tests
     main-is:            TestMain.hs
-    Ghc-Options:        -Wall
+    Ghc-Options:        -Wall -threaded
     build-depends:      base >=4.7 && <4.8
                       , tasty >= 0.7
                       , tasty-hunit
