@@ -3,6 +3,4 @@ sudo: false
 ghc: 7.8
 
 install:
-    - cabal install alex happy
-    - cabal install c2hs
-    - cabal install --only-dependencies --enable-tests
+    - cabal install --only-dependencies --enable-tests -f-gui
