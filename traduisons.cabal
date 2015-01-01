@@ -52,7 +52,7 @@ source-repository head
     location: https://github.com/johntyree/traduisons-hs.git
 
 
-executable main
+executable traduisons
   -- .hs or .lhs file containing the Main module.
   main-is:             Main.hs
   other-modules:       UI.QML, Paths_traduisons
