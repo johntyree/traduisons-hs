@@ -45,6 +45,7 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+data-files:          executables/UI/*.qml
 
 source-repository head
     type: git
