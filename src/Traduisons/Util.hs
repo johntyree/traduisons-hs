@@ -15,6 +15,10 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 
 import Traduisons.Types
 
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (x:_) = Just x
+
 liftEither :: (Error e, Monad m, MonadError e (t e m)) => Either e a -> t e m a
 liftEither = either throwError return
 
