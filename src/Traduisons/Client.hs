@@ -32,7 +32,7 @@ parseInput ('|':s) = [SetToLanguage s]
 parseInput s
   | "/" `isSuffixOf` s = SwapLanguages : parseInput (init s)
   | "|" `isInfixOf` s = let (from, '|':to) = break (== '|') s
-                            f c l = [c l | not (null l)]
+                            f ctor l = [ctor l | not (null l)]
                         in f SetFromLanguage from ++ f SetToLanguage to
   | otherwise = [Translate s]
 
