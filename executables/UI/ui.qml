@@ -33,7 +33,10 @@ ApplicationWindow {
         TextField {
             id: input;
             focus: true;
-            onAccepted: handleInput(input.text);
+            onAccepted: (function (){
+                    handleInput(input.text);
+                    input.selectAll();
+                })();
             font.pointSize: 8;
             height: 22;
             anchors.left: langPairState.right;
