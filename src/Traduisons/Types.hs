@@ -66,12 +66,12 @@ type URL = String
 data AppState = AppState
   { asFromLang :: Language
   , asToLang :: Language
-  , asHistory :: [Command]
+  , asHistory :: [(Command, Maybe Message)]
   , asTraduisonsState :: TraduisonsState
   } deriving Show
 
 instance Eq AppState where
-  AppState f l _ _ == AppState f' l' _ _ = f == f' && l == l'
+  AppState f l h _ == AppState f' l' h' _ = f == f' && l == l' && h == h'
 
 data Command = SetFromLanguage String
              | SetToLanguage String

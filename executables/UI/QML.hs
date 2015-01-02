@@ -14,21 +14,22 @@ import Paths_traduisons
 
 import Traduisons.Types
 import Traduisons.Client
+import Traduisons.Util (safeHead)
 
 type GUIAppStateResult = Either T.Text T.Text
 
 data GUIAppState = GAS { gasIsLoading :: Bool
                        , gasResult :: GUIAppStateResult
-                       , gasAppState :: AppState }
+                       , gasAppStates :: [AppState] }
     deriving (Show, Eq)
 
-defaultGUIAppState :: AppState -> GUIAppState
+defaultGUIAppState :: [AppState] -> GUIAppState
 defaultGUIAppState = GAS False (Right "")
 
 runGUI :: AppState -> IO ()
 runGUI initialAppState = do
     qmlPath <- getDataFileName "executables/UI/ui.qml"
-    state <- newIORef (defaultGUIAppState initialAppState)
+    state <- newIORef (defaultGUIAppState [initialAppState])
     langPairKey <- newSignalKey :: IO (SignalKey (IO ()))
     gasResultKey <- newSignalKey :: IO (SignalKey (IO ()))
     gasIsLoadingKey <- newSignalKey :: IO (SignalKey (IO ()))
@@ -52,16 +53,34 @@ runGUI initialAppState = do
     fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
 
 gasResultProperty :: IORef GUIAppState -> IO T.Text
-gasResultProperty state = do
-    s <- gasResult <$> readIORef state
-    either return return s
+gasResultProperty state = renderHistory . gasAppStates <$> readIORef state
+
+renderHistory :: [AppState] -> T.Text
+renderHistory appStates = T.unlines $ concatMap (fromMaybe [] . render) appStates
+    where
+        render :: AppState -> Maybe [T.Text]
+        render appState = do
+            fM <- fmap fromMsg <$> safeHead . asHistory $ appState
+            tM <- fmap toMsg <$> safeHead . asHistory $ appState
+            guard $ not (null tM)
+            guard $ not (null fM)
+            let fL = getLanguage . asFromLang $ appState
+                tL = getLanguage . asToLang $ appState
+                build = T.concat . map T.pack
+            return $ map build [[fL, ": ", fM], ["  ", tL, ": ", tM]]
+        toMsg (_, Just msg) = msgBody msg
+        toMsg _ = ""
+        fromMsg (Translate s, _) = s
+        fromMsg _ = ""
 
 langPairProperty :: IORef GUIAppState -> IO T.Text
-langPairProperty state = do
-    appState <- gasAppState <$> readIORef state
-    let fr = getLanguage . asFromLang $ appState
-        to = getLanguage . asToLang $ appState
-    return . T.concat . map T.pack $ [fr, " | ", to, ":"]
+langPairProperty state = render . safeHead . gasAppStates <$> readIORef state
+    where render :: Maybe AppState -> T.Text
+          render Nothing = "???"
+          render (Just appState) =
+            let fr = getLanguage . asFromLang $ appState
+                to = getLanguage . asToLang $ appState
+            in T.concat . map T.pack $ [fr, " | ", to, ":"]
 
 gasIsLoadingProperty :: IORef GUIAppState -> IO Bool
 gasIsLoadingProperty state = gasIsLoading <$> readIORef state
@@ -76,7 +95,8 @@ handleInputMethod updateGUI state txt = do
 handleInput :: T.Text -> GUIAppState -> IO GUIAppState
 handleInput input initialGuiAppState = do
     let commands = parseInput (T.unpack input)
-        initialAppState = Just (gasAppState guiAppState)
+        appStates = gasAppStates guiAppState
+        initialAppState = safeHead appStates
         guiAppState = initialGuiAppState { gasIsLoading = False }
         oldMsg = either (const "") id $ gasResult guiAppState
         newMsg m = fromMaybe oldMsg (T.pack . msgBody <$> m)
@@ -85,4 +105,4 @@ handleInput input initialGuiAppState = do
         Left err -> return $ guiAppState { gasResult = Left (T.pack err) }
         Right (msg, appState) -> return
             guiAppState { gasResult = Right (newMsg msg)
-                        , gasAppState = appState }
+                        , gasAppStates = appState : appStates }

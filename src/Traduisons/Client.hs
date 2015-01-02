@@ -46,8 +46,10 @@ runCommands appState cmds = do
 -- Consider representing errors as an (Error String) value as part of a
 -- TranslationResult ADT.
 runCommand :: Command -> StateT AppState (ErrorT String IO) (Maybe Message)
-runCommand c =
-  modify (\a -> a { asHistory = asHistory a ++ [c] }) >> runCommand' c
+runCommand c = do
+  msg <- runCommand' c
+  modify (\a -> a { asHistory = (c, msg) : asHistory a })
+  return msg
 runCommand' :: Command -> StateT AppState (ErrorT String IO) (Maybe Message)
 runCommand' SwapLanguages = get >>= \aS -> from aS >> to aS
   where from = runCommand' . SetFromLanguage . getLanguage . asToLang
