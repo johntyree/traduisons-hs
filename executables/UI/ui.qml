@@ -25,8 +25,7 @@ ApplicationWindow {
         Label {
             id: langPairState;
             font.pointSize: 8;
-            // text: langPair;
-            text: "en | fi:";
+            text: langPair;
             font.family: "Sans";
             anchors.verticalCenter: input.verticalCenter;
         }
@@ -34,7 +33,7 @@ ApplicationWindow {
         TextField {
             id: input;
             focus: true;
-            onAccepted: factorial(input.text);
+            onAccepted: handleInput(input.text);
             font.pointSize: 8;
             height: 22;
             anchors.left: langPairState.right;

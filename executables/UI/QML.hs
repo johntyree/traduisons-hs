@@ -1,65 +1,88 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module UI.QML where
 
 import Control.Concurrent
-import Control.Exception
 import Control.Monad
 import Control.Applicative
 import Data.IORef
+import Data.Maybe
 import Graphics.QML
 import qualified Data.Text as T
 
 import Paths_traduisons
 
+import Traduisons.Types
+import Traduisons.Client
 
-data AppState = AS { isLoading :: Bool
-                   , langPair :: T.Text
-                   , result :: T.Text }
+type GUIAppStateResult = Either T.Text T.Text
+
+data GUIAppState = GAS { gasIsLoading :: Bool
+                       , gasResult :: GUIAppStateResult
+                       , gasAppState :: AppState }
     deriving (Show, Eq)
 
-defaultAppState = AS False (T.pack "en | fi:") (T.pack "")
+defaultGUIAppState :: AppState -> GUIAppState
+defaultGUIAppState = GAS False (Right "")
 
-main :: IO ()
-main = do
+runGUI :: AppState -> IO ()
+runGUI initialAppState = do
     qmlPath <- getDataFileName "executables/UI/ui.qml"
-    state <- newIORef defaultAppState
+    state <- newIORef (defaultGUIAppState initialAppState)
     langPairKey <- newSignalKey :: IO (SignalKey (IO ()))
-    resultKey <- newSignalKey :: IO (SignalKey (IO ()))
-    isLoadingKey <- newSignalKey :: IO (SignalKey (IO ()))
+    gasResultKey <- newSignalKey :: IO (SignalKey (IO ()))
+    gasIsLoadingKey <- newSignalKey :: IO (SignalKey (IO ()))
     clazz <- newClass [
-        langPairProperty langPairKey state
-      , resultProperty resultKey state
-      , isLoadingProperty resultKey state
-      , factorialMethod isLoadingKey resultKey state
+        defPropertySigRO' "result" gasResultKey $ \_ -> do
+          gasResultProperty state
+      , defPropertySigRO' "langPair" langPairKey $ \_ -> do
+          langPairProperty state
+      , defPropertySigRO' "isLoading" gasIsLoadingKey $ \_ -> do
+          gasIsLoadingProperty state
+      , defMethod' "handleInput" $ \obj txt -> do
+          let update = fireSignals keys obj
+              keys = [langPairKey, gasResultKey, gasIsLoadingKey]
+          handleInputMethod update state txt
       ]
     ctx <- newObject clazz ()
     runEngineLoop defaultEngineConfig {
         initialDocument = fileDocument qmlPath
       , contextObject = Just $ anyObjRef ctx }
+  where
+    fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
 
+gasResultProperty :: IORef GUIAppState -> IO T.Text
+gasResultProperty state = do
+    s <- gasResult <$> readIORef state
+    either return return s
 
-resultProperty key state = defPropertySigRO' "result" key $ \_ -> do
-    result <$> readIORef state
+langPairProperty :: IORef GUIAppState -> IO T.Text
+langPairProperty state = do
+    appState <- gasAppState <$> readIORef state
+    let fr = getLanguage . asFromLang $ appState
+        to = getLanguage . asToLang $ appState
+    return . T.concat . map T.pack $ [fr, " | ", to, ":"]
 
-langPairProperty key state = defPropertySigRO' "langPair" key $ \_ -> do
-    langPair <$> readIORef state
+gasIsLoadingProperty :: IORef GUIAppState -> IO Bool
+gasIsLoadingProperty state = gasIsLoading <$> readIORef state
 
-isLoadingProperty key state = defPropertySigRO' "isLoading" key $ \_ -> do
-    isLoading <$> readIORef state
+handleInputMethod :: IO () -> IORef GUIAppState -> T.Text -> IO ()
+handleInputMethod updateGUI state txt = do
+    modifyIORef state $ \s -> s { gasIsLoading = True }
+    void updateGUI
+    let execute = readIORef state >>= handleInput txt >>= writeIORef state
+    void . forkIO $ execute >> updateGUI
 
-factorialMethod ilKey rKey state = defMethod' "factorial" $ \obj txt -> do
-    let n = read $ T.unpack txt :: Integer
-        setWorking s = s { result = T.pack "working ..."
-                         , isLoading = True }
-    modifyIORef state setWorking
-    fireSignals [ilKey, rKey] obj
-    void . forkIO $ do
-        out <- evaluate $ factorial n
-        let setResult r s = s { isLoading = False, result = T.pack (show r) }
-        modifyIORef state (setResult out)
-        fireSignals [ilKey, rKey] obj
-
-fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
-
-factorial :: (Num a, Enum a) => a -> a
-factorial = product . enumFromTo 1
+handleInput :: T.Text -> GUIAppState -> IO GUIAppState
+handleInput input initialGuiAppState = do
+    let commands = parseInput (T.unpack input)
+        initialAppState = Just (gasAppState guiAppState)
+        guiAppState = initialGuiAppState { gasIsLoading = False }
+        oldMsg = either (const "") id $ gasResult guiAppState
+        newMsg m = fromMaybe oldMsg (T.pack . msgBody <$> m)
+    result <- runCommands initialAppState commands
+    case result of
+        Left err -> return $ guiAppState { gasResult = Left (T.pack err) }
+        Right (msg, appState) -> return
+            guiAppState { gasResult = Right (newMsg msg)
+                        , gasAppState = appState }

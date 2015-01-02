@@ -14,7 +14,7 @@ main :: IO ()
 main = mainGUI
 
 mainGUI :: IO ()
-mainGUI = Qui.main
+mainGUI = createAppState >>= Qui.runGUI
 
 mainCLI :: IO ()
 mainCLI = createAppState >>= loop
