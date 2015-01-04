@@ -33,10 +33,15 @@ ApplicationWindow {
         TextField {
             id: input;
             focus: true;
-            onAccepted: (function (){
-                    handleInput(input.text);
-                    input.selectAll();
-                })();
+            Keys.onPressed: {
+                var q = event.key == Qt.Key_Q
+                  , ctrl = event.modifiers & Qt.ControlModifier
+                if (q && ctrl) Qt.quit();
+            }
+            onAccepted: {
+                handleInput(input.text);
+                input.selectAll();
+            }
             font.pointSize: 8;
             height: 22;
             anchors.left: langPairState.right;
