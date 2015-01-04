@@ -11,10 +11,10 @@ ApplicationWindow {
     height: 133;
 
     Rectangle {
-        color: "#E1E1E1"
+        id: entryBar;
+        color: "transparent"
         height: 30;
         width: parent.width;
-        id: entryBar;
         anchors.top: parent.top;
         anchors.topMargin: 3;
         anchors.right: parent.right;
@@ -53,7 +53,7 @@ ApplicationWindow {
     }
 
     Rectangle {
-        color: isError ? "#88FF0000" : "#FFFFFF";
+        color: isError ? "#33FF0000" : "#00000000";
         width: parent.width;
         anchors.top: entryBar.bottom;
         anchors.bottom: parent.bottom;
