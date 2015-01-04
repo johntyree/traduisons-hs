@@ -13,7 +13,16 @@ import System.Process
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 
+import qualified Debug.Trace as Trace
 import Traduisons.Types
+
+trace :: Show a => String -> a -> a
+trace s = join (Trace.trace . prefix s . show)
+  where prefix "" a = a
+        prefix p a = p ++ ": " ++ a
+
+trace' :: Show a => a -> a
+trace' = trace ""
 
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
