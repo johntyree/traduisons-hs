@@ -10,6 +10,19 @@ ApplicationWindow {
     width: 398;
     height: 133;
 
+    TextArea {
+        id: clipboard;
+        visible: false;
+        text: clipboardContents;
+        onTextChanged: {
+            if (text !== "") {
+                clipboard.selectAll();
+                console.log(text);
+                clipboard.cut();
+            }
+        }
+    }
+
     Rectangle {
         id: entryBar;
         color: "transparent"

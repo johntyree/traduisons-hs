@@ -44,6 +44,8 @@ runGUI initialAppState = do
     cls <- newClass [
         defPropertySigRO' "result" gasResultSignal $ \_ -> do
           gasResultProperty state
+      , defPropertySigRO' "clipboardContents" gasResultSignal $ \_ -> do
+          clipboardContentsProperty state
       , defPropertySigRO' "langPair" langPairSignal $ \_ -> do
           langPairProperty state
       , defPropertySigRO' "isLoading" gasIsLoadingSignal $ \_ -> do
@@ -61,6 +63,10 @@ runGUI initialAppState = do
     shutdownQt
   where
     fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
+
+clipboardContentsProperty :: IORef GUIAppState -> IO T.Text
+clipboardContentsProperty state =  render <$> readIORef state
+  where render = either (const "") id . gasResult
 
 gasResultProperty :: IORef GUIAppState -> IO T.Text
 gasResultProperty state = do
@@ -139,8 +145,12 @@ handleInput input initialGuiAppState = do
     case result of
         Left err -> return $ guiAppState { gasResult = Left err }
         Right (msg, appState) -> return $
+          -- If no new and old is err, then old else new
           let oldResult = gasResult guiAppState
-              maybeNewResult = Right . T.pack . msgBody <$> msg
-              newResult = fromMaybe oldResult maybeNewResult
-          in guiAppState { gasResult = newResult
+              maybeNewResult = T.pack . msgBody <$> msg
+              newResult = Right $ fromMaybe "" maybeNewResult
+              finalResult = if isLeft oldResult && isNothing maybeNewResult
+                            then oldResult
+                            else newResult
+          in guiAppState { gasResult = finalResult
                          , gasAppStates = appState : appStates }
