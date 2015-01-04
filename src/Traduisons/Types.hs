@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Traduisons.Types where
 
@@ -11,17 +12,24 @@ import Data.ByteString.Char8
 import Data.IORef
 
 newtype Traduisons a = Traduisons {
-  unTraduisons :: ReaderT TraduisonsState (ErrorT String IO) a }
+  unTraduisons :: ReaderT TraduisonsState (ErrorT TraduisonsError IO) a }
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader TraduisonsState,
-            MonadError String)
+            MonadError TraduisonsError)
+
+data TraduisonsError = TErr TraduisonsErrorFlag String
+  deriving (Show, Eq)
+
+instance Error TraduisonsError where
+  strMsg s = TErr UnknownError s
 
 type TraduisonsState = TokenRef
 newtype TokenRef = TokenRef { unTokenRef :: IORef TokenData }
 
-liftErrorT :: ErrorT String IO a -> Traduisons a
+liftErrorT :: ErrorT TraduisonsError IO a -> Traduisons a
 liftErrorT = Traduisons . lift
 
-runTraduisons :: TraduisonsState -> Traduisons a -> IO (Either String a)
+runTraduisons :: TraduisonsState -> Traduisons a
+              -> IO (Either TraduisonsError a)
 runTraduisons = flip $ (runErrorT .) . runReaderT . unTraduisons
 
 instance Show TokenRef where
@@ -79,3 +87,12 @@ data Command = SetFromLanguage String
              | SwapLanguages
              | Exit
   deriving (Show, Eq)
+
+data TraduisonsErrorFlag = ArgumentOutOfRangeException
+                         | CurlError
+                         | NoStringError
+                         | TraduisonsExit
+                         | TokenExpiredError
+                         | UnknownError
+                         | UnrecognizedJSONError
+  deriving (Show, Eq, Enum)

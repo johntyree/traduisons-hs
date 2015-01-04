@@ -5,6 +5,7 @@ module UI.QML where
 import Control.Concurrent
 import Control.Monad
 import Control.Applicative
+import Data.Either
 import Data.IORef
 import Data.Maybe
 import Graphics.QML
@@ -16,7 +17,7 @@ import Traduisons.Types
 import Traduisons.Client
 import Traduisons.Util (safeHead)
 
-type GUIAppStateResult = Either T.Text T.Text
+type GUIAppStateResult = Either TraduisonsError T.Text
 
 data GUIAppState = GAS { gasIsLoading :: Bool
                        , gasResult :: GUIAppStateResult
@@ -53,7 +54,11 @@ runGUI initialAppState = do
     fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
 
 gasResultProperty :: IORef GUIAppState -> IO T.Text
-gasResultProperty state = renderHistory . gasAppStates <$> readIORef state
+gasResultProperty state = do
+  gas <- readIORef state
+  return $ case (gasResult gas) of
+    Left msg -> T.pack (renderError msg)
+    Right _ -> renderHistory (gasAppStates gas)
 
 renderHistory :: [AppState] -> T.Text
 renderHistory appStates = T.unlines $ concatMap (fromMaybe [] . render) appStates
@@ -98,11 +103,12 @@ handleInput input initialGuiAppState = do
         appStates = gasAppStates guiAppState
         initialAppState = safeHead appStates
         guiAppState = initialGuiAppState { gasIsLoading = False }
-        oldMsg = either (const "") id $ gasResult guiAppState
-        newMsg m = fromMaybe oldMsg (T.pack . msgBody <$> m)
     result <- runCommands initialAppState commands
     case result of
-        Left err -> return $ guiAppState { gasResult = Left (T.pack err) }
-        Right (msg, appState) -> return
-            guiAppState { gasResult = Right (newMsg msg)
-                        , gasAppStates = appState : appStates }
+        Left err -> return $ guiAppState { gasResult = Left err }
+        Right (msg, appState) -> return $
+          let oldResult = gasResult guiAppState
+              maybeNewResult = Right . T.pack . msgBody <$> msg
+              newResult = fromMaybe oldResult maybeNewResult
+          in guiAppState { gasResult = newResult
+                         , gasAppStates = appState : appStates }

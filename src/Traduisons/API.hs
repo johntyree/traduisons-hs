@@ -13,6 +13,9 @@ import Control.Monad.Reader
 import Data.Aeson
 import Data.IORef
 import Data.List
+import Data.List.Split
+import Data.Maybe
+import Text.Read
 import Network.HTTP.Client as N
 import Network.HTTP.Client.TLS as N
 import Network.HTTP.Types
@@ -51,13 +54,19 @@ authorizedRequest url urlData' = do
   man <- liftIO $ N.newManager N.defaultManagerSettings
   tokenRef <- unTokenRef <$> ask
   token <- (trToken . tdToken) <$> liftIO (readIORef tokenRef)
-  let hdrs = headers token
-      formData = urlData token
-      decodeAndStrip = read . stripBOM . B.toString
-  result <- liftErrorT $ decodeAndStrip <$> curl url GET hdrs formData man
-  checkExpired result
+  let hdrs           = headers token
+      formData       = urlData token
+  curlResult <- liftErrorT $ B.toString <$> curl url GET hdrs formData man
+  let decodedAndStripped = convertStupidUnicodeNewline . stripBOM $ curlResult
+      defaultError = Left $ TErr NoStringError decodedAndStripped
+      maybeResult = Right <$> readMaybe decodedAndStripped
+      deserialized = fromMaybe defaultError maybeResult
+  result <- liftErrorT . liftEither $ deserialized
+  case checkException result of
+    Nothing -> return result
+    Just err -> throwError err
 
-newState :: ErrorT String IO TraduisonsState
+newState :: ErrorT TraduisonsError IO TraduisonsState
 newState = do
   man <- liftIO $ N.newManager N.tlsManagerSettings
   clientSecret <- liftIO readClientSecret
@@ -75,14 +84,19 @@ newState = do
       ("grant_type", Just "client_credentials"),
       ("scope", Just $ B.pack apiDomain)]
 
-parseTokenResponse :: B.ByteString -> Either String TokenResponse
+parseTokenResponse :: B.ByteString -> Either TraduisonsError TokenResponse
 parseTokenResponse jsonBytes = fromJSONBytes $ BL.fromStrict jsonBytes
   where
-    decodeErr = "Failed to decode: " ++ B.unpack jsonBytes
+    decodeErr = TErr UnrecognizedJSONError errMsg
+    errMsg =  "Failed to decode: " ++ B.unpack jsonBytes
     toEither = maybe (Left decodeErr) Right
     fromJSONBytes = toEither . decode
 
-checkExpired :: String -> Traduisons String
-checkExpired s = if "ArgumentException:" `isPrefixOf` s
-                 then throwError s
-                 else return s
+convertStupidUnicodeNewline :: String -> String
+convertStupidUnicodeNewline = intercalate "\n" . splitOn "\\u000d\\u000a"
+
+checkException :: String -> Maybe TraduisonsError
+checkException s = do
+  let (header, m) = break (== ':') s
+      flags = [ArgumentOutOfRangeException .. UnknownError]
+  flip TErr m <$> find (flip isInfixOf header . show) flags

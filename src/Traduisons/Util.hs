@@ -26,16 +26,16 @@ currentTime :: IO Seconds
 currentTime = fmap round getPOSIXTime
 
 curl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header] -> FormData
-      -> Manager -> ErrorT String m B.ByteString
+      -> Manager -> ErrorT TraduisonsError m B.ByteString
 curl url = if ssl then systemCurl url else nativeCurl url
   where ssl = "https" `isPrefixOf` url
 
-mkReq :: String -> Either String Request
-mkReq url = let err = Left ("Failed to parse URL: " ++ show url)
+mkReq :: String -> Either TraduisonsError Request
+mkReq url = let err = Left $ TErr CurlError ("Failed to parse URL: " ++ show url)
             in maybe err Right (parseUrl url)
 
 nativeCurl :: MonadIO m => URL -> StdMethod -> [Header] -> FormData
-           -> Manager -> ErrorT String m B.ByteString
+           -> Manager -> ErrorT TraduisonsError m B.ByteString
 nativeCurl url httpMethod hdrs formData man = do
   req'' <- liftEither (mkReq url)
   req' <- case httpMethod of
@@ -44,7 +44,7 @@ nativeCurl url httpMethod hdrs formData man = do
                         f (a, Nothing) = (a, "")
                   in return $ urlEncodedBody (map f formData) req''
             _ -> let err = "Curl doesn't know " ++ show httpMethod
-                 in throwError err
+                 in throwError $ TErr CurlError err
   let ua = ("User-Agent", "traduisons/2.0.0")
       addHeaders h r = r { requestHeaders = ua:h ++ requestHeaders r }
       req = addHeaders hdrs req'
@@ -53,7 +53,7 @@ nativeCurl url httpMethod hdrs formData man = do
 
 -- Working around broken TLS (https://github.com/vincenthz/hs-tls/issues/87)
 systemCurl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header]
-           -> FormData -> Manager -> ErrorT String m B.ByteString
+           -> FormData -> Manager -> ErrorT TraduisonsError m B.ByteString
 systemCurl url httpMethod hdrs formData _ = do
   let dataAsArg = [B.concat [a, "=", b] | (a, Just b) <- formData]
       addFlag flag argList = flag : intersperse flag argList
@@ -65,7 +65,7 @@ systemCurl url httpMethod hdrs formData _ = do
               GET -> return $ "-G" : addFlag "-d" dataAsArg
               POST -> return $ addFlag "--data-urlencode" dataAsArg
               _ -> let err = "Curl doesn't know " ++ show httpMethod
-                   in throwError err
+                   in throwError $ TErr CurlError err
   let args = "-s" : url : map B.unpack (argHdrs ++ argData)
   B.pack <$> liftIO (readProcess "curl" args "")
 

@@ -5,6 +5,7 @@ import Control.Applicative
 import Control.Monad.Error
 import Control.Monad.State
 import Data.List
+import Data.List.Split
 
 import Traduisons.API
 import Traduisons.Types
@@ -15,9 +16,9 @@ helpMsg = "Help yourself."
 createAppState :: IO AppState
 createAppState =
   let new = return . AppState (Language "nl") (Language "en") []
-  in runErrorT newState >>= either error new
+  in runErrorT newState >>= either (error . show) new
 
-renewToken :: StateT AppState (ErrorT String IO) (Maybe a)
+renewToken :: StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
 renewToken = do
   appState <- get
   traduisonsState <- lift newState
@@ -37,7 +38,7 @@ parseInput s
   | otherwise = [Translate s]
 
 runCommands :: Maybe AppState -> [Command]
-            -> IO (Either String (Maybe Message, AppState))
+            -> IO (Either TraduisonsError (Maybe Message, AppState))
 runCommands appState cmds = do
   let app = foldM (const runCommand) Nothing cmds
   initial <- maybe (liftIO createAppState) return appState
@@ -45,12 +46,12 @@ runCommands appState cmds = do
 
 -- Consider representing errors as an (Error String) value as part of a
 -- TranslationResult ADT.
-runCommand :: Command -> StateT AppState (ErrorT String IO) (Maybe Message)
+runCommand :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
 runCommand c = do
   msg <- runCommand' c
   modify (\a -> a { asHistory = (c, msg) : asHistory a })
   return msg
-runCommand' :: Command -> StateT AppState (ErrorT String IO) (Maybe Message)
+runCommand' :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
 runCommand' SwapLanguages = get >>= \aS -> from aS >> to aS
   where from = runCommand' . SetFromLanguage . getLanguage . asToLang
         to = runCommand' . SetToLanguage . getLanguage . asFromLang
@@ -70,4 +71,14 @@ runCommand' (Translate rawMsg) = go (1 :: Int)
           then renewToken >> go 0
           else throwError err
         Right msg -> return $ Just msg
-runCommand' Exit = throwError "exit"
+runCommand' Exit = throwError $ TErr TraduisonsExit "Exit"
+
+renderError :: TraduisonsError -> String
+renderError (TErr flag msg) = case flag of
+  ArgumentOutOfRangeException -> "Bad language code: " ++ msg
+  UnrecognizedJSONError -> msg
+  CurlError -> msg
+  NoStringError -> msg
+  TraduisonsExit -> msg
+  UnknownError -> msg
+  TokenExpiredError -> "Renewing expired token..."

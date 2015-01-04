@@ -36,7 +36,7 @@ interpretCommands appState commands = do
   let render = msgBody
   result <- runCommands appState commands
   case result of
-    Left err -> putStrLn err >> return Nothing
+    Left err -> putStrLn (renderError err) >> return Nothing
     Right (msg, s) -> do
       when (isJust msg) $ putStrLn . render . fromJust $ msg
       return $ Just s
