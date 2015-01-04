@@ -52,6 +52,7 @@ ApplicationWindow {
                   , x = event.key == Qt.Key_X
                   , c = event.key == Qt.Key_C
                   , a = event.key == Qt.Key_A
+                  , e = event.key == Qt.Key_E
                   , w = event.key == Qt.Key_W
                   , ctrl = event.modifiers & Qt.ControlModifier
                   , alt = event.modifiers & Qt.AltModifier;
@@ -59,9 +60,11 @@ ApplicationWindow {
                     input.paste();
                     event.accepted = true;
                 }
-                if (a && alt) { input.selectAll(); event.accepted = true; }
-                if (c && ctrl) { input.copy(); event.accepted = true; }
-                if (x && ctrl) { input.cut(); event.accepted = true; }
+                if (a && alt) { selectAll(); event.accepted = true; }
+                if (a && ctrl) { cursorPosition = 0; event.accepted = true; }
+                if (e && ctrl) { cursorPosition = length; event.accepted = true; }
+                if (c && ctrl) { copy(); event.accepted = true; }
+                if (x && ctrl) { cut(); event.accepted = true; }
                 if (q && ctrl) { event.accepted = true; Qt.quit(); }
                 if (w && ctrl) {
                     event.accepted = true;
