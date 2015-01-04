@@ -35,7 +35,16 @@ ApplicationWindow {
             focus: true;
             Keys.onPressed: {
                 var q = event.key == Qt.Key_Q
-                  , ctrl = event.modifiers & Qt.ControlModifier
+                  , v = event.key == Qt.Key_V
+                  , c = event.key == Qt.Key_C
+                  , a = event.key == Qt.Key_A
+                  , ctrl = event.modifiers & Qt.ControlModifier;
+                if (v && ctrl && input.canPaste) {
+                    input.paste();
+                    event.accepted = true;
+                }
+                if (a && ctrl) input.selectAll(); event.accepted = true;
+                if (c && ctrl) input.copy(); event.accepted = true;
                 if (q && ctrl) Qt.quit();
             }
             onAccepted: {
