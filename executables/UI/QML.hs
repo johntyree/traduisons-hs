@@ -50,6 +50,7 @@ runGUI initialAppState = do
     runEngineLoop defaultEngineConfig {
         initialDocument = fileDocument qmlPath
       , contextObject = Just $ anyObjRef ctx }
+    shutdownQt
   where
     fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
 
