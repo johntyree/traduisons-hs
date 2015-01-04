@@ -58,10 +58,19 @@ ApplicationWindow {
     }
 
     Rectangle {
-        color: isError ? "#33FF0000" : "#00000000";
+        id: output
+        color: "#00000000";
         width: parent.width;
         anchors.top: entryBar.bottom;
         anchors.bottom: parent.bottom;
+        state: isError ? "error" : "";
+        states: State {
+            name: "error";
+            PropertyChanges {
+                target: output;
+                color: "#33FF0000";
+            }
+        }
 
         TextArea {
             id: output;
