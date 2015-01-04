@@ -59,7 +59,7 @@ ApplicationWindow {
 
     Rectangle {
         id: output
-        color: "#00000000";
+        color: "#FFFFFF";
         width: parent.width;
         anchors.top: entryBar.bottom;
         anchors.bottom: parent.bottom;
@@ -77,6 +77,7 @@ ApplicationWindow {
             activeFocusOnPress: false;
             activeFocusOnTab: false;
             anchors.fill: parent;
+            backgroundVisible: false;
             font.family: "Sans";
             font.pointSize: 8;
             readOnly: true;
