@@ -83,7 +83,6 @@ ApplicationWindow {
             readOnly: true;
             text: result;
             textFormat: Text.RichText;
-            // text: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10" + length;
             wrapMode: Text.WrapAnywhere;
             onTextChanged: {
                 outputText.cursorPosition = length;
