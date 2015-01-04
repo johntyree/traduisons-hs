@@ -45,6 +45,8 @@ runGUI initialAppState = do
           langPairProperty state
       , defPropertySigRO' "isLoading" gasIsLoadingSignal $ \_ -> do
           gasIsLoadingProperty state
+      , defPropertySigRO' "isError" isErrorSignal $ \_ -> do
+          isErrorProperty state
       , defMethod' "handleInput" $ \obj txt -> do
           let update = fireSignals signals obj
           handleInputMethod update state txt
@@ -93,6 +95,9 @@ langPairProperty state = render . safeHead . gasAppStates <$> readIORef state
 
 gasIsLoadingProperty :: IORef GUIAppState -> IO Bool
 gasIsLoadingProperty state = gasIsLoading <$> readIORef state
+
+isErrorProperty :: IORef GUIAppState -> IO Bool
+isErrorProperty state = isLeft . gasResult <$> readIORef state
 
 handleInputMethod :: IO () -> IORef GUIAppState -> T.Text -> IO ()
 handleInputMethod updateGUI state txt = do

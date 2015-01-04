@@ -52,13 +52,20 @@ ApplicationWindow {
         }
     }
 
-    Text {
-        id: output;
+    Rectangle {
+        color: isError ? "#88FF0000" : "#FFFFFF";
+        width: parent.width;
         anchors.top: entryBar.bottom;
-        anchors.bottom: window.bottom;
-        wrapMode: Text.WrapAnywhere;
-        font.pointSize: 8;
-        font.family: "Sans";
-        text: result;
+        anchors.bottom: parent.bottom;
+
+        Text {
+            id: output;
+            anchors.fill: parent;
+            anchors.margins: 4;
+            wrapMode: Text.WrapAnywhere;
+            font.pointSize: 8;
+            font.family: "Sans";
+            text: result;
+        }
     }
 }
