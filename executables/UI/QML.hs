@@ -78,7 +78,13 @@ renderHistory appStates = T.unlines $ concatMap (fromMaybe [] . render) appState
             let fL = getLanguage . asFromLang $ appState
                 tL = getLanguage . asToLang $ appState
                 build = T.concat . map T.pack
-            return $ map build [[fL, ": ", fM], ["  ", tL, ": ", tM]]
+                -- FIXME: This is going to require HTML escaping...
+                css c t = concat ["<span style=\"color: ", c, "\">" , t
+                                 , "</span>"]
+                indent l = ["<div style=\"margin-left:10\">"]++l++["</div>"]
+                from = [css "darkred" fL, ": ", fM]
+                to = indent [css "darkblue" tL, ": ", tM]
+            return $ map build [from, to]
         toMsg (_, Just msg) = msgBody msg
         toMsg _ = ""
         fromMsg (Translate s, _) = s

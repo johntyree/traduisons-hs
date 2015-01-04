@@ -63,14 +63,22 @@ ApplicationWindow {
         anchors.top: entryBar.bottom;
         anchors.bottom: parent.bottom;
 
-        Text {
+        TextArea {
             id: output;
             anchors.fill: parent;
-            anchors.margins: 4;
+            activeFocusOnPress: false;
+            activeFocusOnTab: false;
+            readOnly: true;
             wrapMode: Text.WrapAnywhere;
             font.pointSize: 8;
             font.family: "Sans";
             text: result;
+            textFormat: Text.RichText;
+            Keys.onPressed: {
+                var q = event.key == Qt.Key_Q
+                  , ctrl = event.modifiers & Qt.ControlModifier
+                if (q && ctrl) Qt.quit();
+            }
         }
     }
 }
