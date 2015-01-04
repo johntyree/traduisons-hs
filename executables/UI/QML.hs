@@ -31,22 +31,25 @@ runGUI :: AppState -> IO ()
 runGUI initialAppState = do
     qmlPath <- getDataFileName "executables/UI/ui.qml"
     state <- newIORef (defaultGUIAppState [initialAppState])
-    langPairKey <- newSignalKey :: IO (SignalKey (IO ()))
-    gasResultKey <- newSignalKey :: IO (SignalKey (IO ()))
-    gasIsLoadingKey <- newSignalKey :: IO (SignalKey (IO ()))
-    clazz <- newClass [
-        defPropertySigRO' "result" gasResultKey $ \_ -> do
+    langPairSignal <- newSignalKey
+    gasResultSignal <- newSignalKey
+    gasIsLoadingSignal <- newSignalKey
+    isErrorSignal <- newSignalKey
+    let signals = [langPairSignal, isErrorSignal,
+                   gasResultSignal, gasIsLoadingSignal]
+        signals :: [SignalKey (IO ())]
+    cls <- newClass [
+        defPropertySigRO' "result" gasResultSignal $ \_ -> do
           gasResultProperty state
-      , defPropertySigRO' "langPair" langPairKey $ \_ -> do
+      , defPropertySigRO' "langPair" langPairSignal $ \_ -> do
           langPairProperty state
-      , defPropertySigRO' "isLoading" gasIsLoadingKey $ \_ -> do
+      , defPropertySigRO' "isLoading" gasIsLoadingSignal $ \_ -> do
           gasIsLoadingProperty state
       , defMethod' "handleInput" $ \obj txt -> do
-          let update = fireSignals keys obj
-              keys = [langPairKey, gasResultKey, gasIsLoadingKey]
+          let update = fireSignals signals obj
           handleInputMethod update state txt
       ]
-    ctx <- newObject clazz ()
+    ctx <- newObject cls ()
     runEngineLoop defaultEngineConfig {
         initialDocument = fileDocument qmlPath
       , contextObject = Just $ anyObjRef ctx }
