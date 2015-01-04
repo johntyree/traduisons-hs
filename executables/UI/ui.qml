@@ -49,16 +49,31 @@ ApplicationWindow {
             Keys.onPressed: {
                 var q = event.key == Qt.Key_Q
                   , v = event.key == Qt.Key_V
+                  , x = event.key == Qt.Key_X
                   , c = event.key == Qt.Key_C
                   , a = event.key == Qt.Key_A
-                  , ctrl = event.modifiers & Qt.ControlModifier;
+                  , w = event.key == Qt.Key_W
+                  , ctrl = event.modifiers & Qt.ControlModifier
+                  , alt = event.modifiers & Qt.AltModifier;
                 if (v && ctrl && input.canPaste) {
                     input.paste();
                     event.accepted = true;
                 }
-                if (a && ctrl) input.selectAll(); event.accepted = true;
-                if (c && ctrl) input.copy(); event.accepted = true;
-                if (q && ctrl) Qt.quit();
+                if (a && alt) { input.selectAll(); event.accepted = true; }
+                if (c && ctrl) { input.copy(); event.accepted = true; }
+                if (x && ctrl) { input.cut(); event.accepted = true; }
+                if (q && ctrl) { event.accepted = true; Qt.quit(); }
+                if (w && ctrl) {
+                    event.accepted = true;
+                    var current = cursorPosition;
+                    selectWord();
+                    var newCursorPos = selectionStart
+                      , pre = text.slice(0, selectionStart)
+                      , post = text.slice(current, length);
+                    deselect();
+                    text = pre + post;
+                    cursorPosition = newCursorPos;
+                }
             }
             onAccepted: {
                 handleInput(input.text);
