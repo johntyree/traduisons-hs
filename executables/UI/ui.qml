@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.1
 
 ApplicationWindow {
     id: window
+    title: "Traduisons!"
     visible: true;
     width: 398;
     height: 133;
