@@ -48,6 +48,7 @@ nativeCurl :: MonadIO m => URL -> StdMethod -> [Header] -> FormData
 nativeCurl url httpMethod hdrs formData man = do
   req'' <- liftEither (mkReq url)
   req' <- case httpMethod of
+            -- FIXME: Make a newtype for this
             GET -> return $ setQueryString formData req''
             POST -> let f (a, Just b) = (a, b)
                         f (a, Nothing) = (a, "")
