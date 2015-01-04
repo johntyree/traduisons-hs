@@ -67,6 +67,7 @@ executable traduisons
                        , hsqml
                        , mtl
                        , readline
+                       , split
                        , text
                        , traduisons
   else

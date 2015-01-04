@@ -2,11 +2,14 @@
 
 module UI.QML where
 
+import Prelude hiding (div)
 import Control.Concurrent
 import Control.Monad
 import Control.Applicative
 import Data.Either
 import Data.IORef
+import Data.List
+import Data.List.Split
 import Data.Maybe
 import Graphics.QML
 import qualified Data.Text as T
@@ -63,12 +66,28 @@ gasResultProperty :: IORef GUIAppState -> IO T.Text
 gasResultProperty state = do
   gas <- readIORef state
   return $ case (gasResult gas) of
-    Left msg -> T.pack (renderError msg)
+    Left msg -> asRichText (renderError msg)
     Right _ -> renderHistory (gasAppStates gas)
 
+asRichText :: String -> T.Text
+asRichText s = T.pack $ concat renderedLines
+  where
+    lines' = splitOn "\n" s
+    renderedLines = div hangingIndent [(intercalate "<br/>" lines')]
+
+hangingIndent :: String
+hangingIndent = "margin-left: 8px; text-indent: -8px"
+
+indent :: String
+indent = "margin-left: 5px"
+
+div :: String -> [String] -> [String]
+div s l = ["<div style=\"" ++ s ++ "\">"] ++ l ++ ["</div>"]
+
 renderHistory :: [AppState] -> T.Text
-renderHistory appStates = T.unlines $ concatMap (fromMaybe [] . render) appStates
+renderHistory appStates = T.unlines renderedLines
     where
+        renderedLines =  concatMap (fromMaybe [] . render) (reverse appStates)
         render :: AppState -> Maybe [T.Text]
         render appState = do
             fM <- fmap fromMsg <$> safeHead . asHistory $ appState
@@ -77,14 +96,12 @@ renderHistory appStates = T.unlines $ concatMap (fromMaybe [] . render) appState
             guard $ not (null fM)
             let fL = getLanguage . asFromLang $ appState
                 tL = getLanguage . asToLang $ appState
-                build = T.concat . map T.pack
                 -- FIXME: This is going to require HTML escaping...
-                css c t = concat ["<span style=\"color: ", c, "\">" , t
-                                 , "</span>"]
-                indent l = ["<div style=\"margin-left:10\">"]++l++["</div>"]
-                from = [css "darkred" fL, ": ", fM]
-                to = indent [css "darkblue" tL, ": ", tM]
-            return $ map build [from, to]
+                from = div hangingIndent [color "darkred" fL, ": ", fM]
+                to = div hangingIndent [color "darkblue" tL, ": ", tM]
+            return $ map build [from, div indent to]
+        build = T.pack . concat
+        color c t = concat ["<span style=\"color: ", c, "\">" , t , "</span>"]
         toMsg (_, Just msg) = msgBody msg
         toMsg _ = ""
         fromMsg (Translate s, _) = s
