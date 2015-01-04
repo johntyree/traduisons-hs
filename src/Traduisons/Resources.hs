@@ -3,6 +3,7 @@
 module Traduisons.Resources where
 
 import Data.List
+import System.Environment
 import qualified Data.ByteString.Char8 as B
 
 apiDomain :: String
@@ -27,7 +28,11 @@ tokenURL :: String
 tokenURL = "https://datamarket.accesscontrol.windows.net/v2/OAuth2-13"
 
 readClientSecret :: IO B.ByteString
-readClientSecret = B.readFile "SECRET"
+readClientSecret = do
+  secretEnv <- lookupEnv "TRADUISONS_SECRET"
+  case secretEnv of
+    Nothing -> B.readFile "SECRET"
+    Just secret -> return (B.pack secret)
 
 clientID :: B.ByteString
 clientID = "Traduisons"
