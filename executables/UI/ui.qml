@@ -73,16 +73,20 @@ ApplicationWindow {
         }
 
         TextArea {
-            id: output;
-            anchors.fill: parent;
+            id: outputText;
             activeFocusOnPress: false;
             activeFocusOnTab: false;
-            readOnly: true;
-            wrapMode: Text.WrapAnywhere;
-            font.pointSize: 8;
+            anchors.fill: parent;
             font.family: "Sans";
+            font.pointSize: 8;
+            readOnly: true;
             text: result;
             textFormat: Text.RichText;
+            // text: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10" + length;
+            wrapMode: Text.WrapAnywhere;
+            onTextChanged: {
+                outputText.cursorPosition = length;
+            }
             Keys.onPressed: {
                 var q = event.key == Qt.Key_Q
                   , ctrl = event.modifiers & Qt.ControlModifier
