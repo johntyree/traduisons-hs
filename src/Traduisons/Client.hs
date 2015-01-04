@@ -13,6 +13,12 @@ import Traduisons.Types
 helpMsg :: String
 helpMsg = "Help yourself."
 
+runTest :: String -> IO (Either TraduisonsError (Maybe Message, AppState))
+runTest input = do
+  let commands = concatMap parseInput $ splitOn ";" input
+      action st = runCommands (Just st) commands
+  createAppState >>= action
+
 createAppState :: IO AppState
 createAppState =
   let new = return . AppState (Language "nl") (Language "en") []
