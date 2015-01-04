@@ -79,8 +79,10 @@ ApplicationWindow {
                 }
             }
             onAccepted: {
-                handleInput(input.text);
-                input.selectAll();
+                handleInput(text);
+                while (text[0] === '/') text = text.slice(1);
+                while (text[length-1] === '/') text = text.slice(0, -1);
+                selectAll();
             }
             font.pointSize: 8;
             height: 22;
