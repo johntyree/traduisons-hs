@@ -42,15 +42,15 @@ runGUI initialAppState = do
                    gasResultSignal, gasIsLoadingSignal]
         signals :: [SignalKey (IO ())]
     cls <- newClass [
-        defPropertySigRO' "result" gasResultSignal $ \_ -> do
+        defPropertySigRO' "result" gasResultSignal $ \_ ->
           gasResultProperty state
-      , defPropertySigRO' "clipboardContents" gasResultSignal $ \_ -> do
+      , defPropertySigRO' "clipboardContents" gasResultSignal $ \_ ->
           clipboardContentsProperty state
-      , defPropertySigRO' "langPair" langPairSignal $ \_ -> do
+      , defPropertySigRO' "langPair" langPairSignal $ \_ ->
           langPairProperty state
-      , defPropertySigRO' "isLoading" gasIsLoadingSignal $ \_ -> do
+      , defPropertySigRO' "isLoading" gasIsLoadingSignal $ \_ ->
           gasIsLoadingProperty state
-      , defPropertySigRO' "isError" isErrorSignal $ \_ -> do
+      , defPropertySigRO' "isError" isErrorSignal $ \_ ->
           isErrorProperty state
       , defMethod' "handleInput" $ \obj txt -> do
           let update = fireSignals signals obj
@@ -62,7 +62,7 @@ runGUI initialAppState = do
       , contextObject = Just $ anyObjRef ctx }
     shutdownQt
   where
-    fireSignals keys obj = mapM_ (flip fireSignal obj) $ keys
+    fireSignals keys obj = mapM_ (`fireSignal` obj) keys
 
 clipboardContentsProperty :: IORef GUIAppState -> IO T.Text
 clipboardContentsProperty state =  render <$> readIORef state
@@ -71,7 +71,7 @@ clipboardContentsProperty state =  render <$> readIORef state
 gasResultProperty :: IORef GUIAppState -> IO T.Text
 gasResultProperty state = do
   gas <- readIORef state
-  return $ case (gasResult gas) of
+  return $ case gasResult gas of
     Left msg -> asRichText (renderError msg)
     Right _ -> renderHistory (gasAppStates gas)
 
@@ -79,7 +79,7 @@ asRichText :: String -> T.Text
 asRichText s = T.pack $ concat renderedLines
   where
     lines' = splitOn "\n" s
-    renderedLines = div hangingIndent [(intercalate "<br/>" lines')]
+    renderedLines = div hangingIndent [intercalate "<br/>" lines']
 
 hangingIndent :: String
 hangingIndent = "margin-left: 8px; text-indent: -8px"
