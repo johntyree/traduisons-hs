@@ -21,7 +21,7 @@ runTest input = do
 
 createAppState :: IO AppState
 createAppState =
-  let new = return . AppState (Language "nl") (Language "en") []
+  let new = return . AppState (Language "auto") (Language "en") []
   in runErrorT newState >>= either (error . show) new
 
 renewToken :: StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
