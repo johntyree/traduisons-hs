@@ -60,7 +60,7 @@ executable traduisons
   -- .hs or .lhs file containing the Main module.
   main-is:             Main.hs
   other-modules:       UI.QML, Paths_traduisons
-  ghc-options:        -Wall -threaded
+  ghc-options:         -Wall -threaded
   build-tools:         c2hs
   if flag(gui)
     build-depends:       base >=4.7 && <4.8
