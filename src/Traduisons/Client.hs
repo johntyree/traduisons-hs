@@ -55,28 +55,25 @@ runCommand c = do
   msg <- runCommand' c
   modify (\a -> a { asHistory = (c, msg) : asHistory a })
   return msg
+
 runCommand' :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
+runCommand' Exit = throwError $ TErr TraduisonsExit "Exit"
 runCommand' SwapLanguages = get >>= \aS -> from aS >> to aS
   where from = runCommand' . SetFromLanguage . getLanguage . asToLang
         to = runCommand' . SetToLanguage . getLanguage . asFromLang
+
 runCommand' (SetFromLanguage l) = const Nothing <$> modify setFromLang
   where setFromLang appState = appState { asFromLang = Language l }
+
 runCommand' (SetToLanguage l) = const Nothing <$> modify setToLang
   where setToLang appState = appState { asToLang = Language l }
-runCommand' (Translate rawMsg) = go (1 :: Int)
-  where
-    go n = do
-      AppState fromLang' _ _ _ <- get
-      when (getLanguage fromLang' == "auto") $ void $ runCommand' (DetectLanguage rawMsg)
-      AppState fromLang toLang _ tradState <- get
-      let message = Message fromLang rawMsg
-      translation <- liftIO . runTraduisons tradState $ translate toLang message
-      case translation of
-        Left err ->
-          if n > 0
-          then renewToken >> go 0
-          else throwError err
-        Right msg -> return $ Just msg
+
+runCommand' (Translate rawMsg) = do
+  AppState fromLang' _ _ _ <- get
+  when (getLanguage fromLang' == "auto") $ void $ runCommand' (DetectLanguage rawMsg)
+  AppState fromLang toLang _ _ <- get
+  let message = Message fromLang rawMsg
+  withTokenRefresh $ translate toLang message
 
 runCommand' (DetectLanguage rawMsg) = do
   result <- withTokenRefresh (detectLanguage rawMsg)
@@ -84,9 +81,7 @@ runCommand' (DetectLanguage rawMsg) = do
     Nothing -> throwError $ TErr LanguageDetectionError "Failed to detect language"
     Just l -> runCommand' (SetFromLanguage (getLanguage l))
 
-runCommand' Exit = throwError $ TErr TraduisonsExit "Exit"
 
- -- unTraduisons :: ReaderT TraduisonsState (ErrorT TraduisonsError IO) a }
 withTokenRefresh :: Traduisons a -> StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
 withTokenRefresh f = go (1 :: Int)
   where
@@ -101,6 +96,7 @@ withTokenRefresh f = go (1 :: Int)
           else throwError err
         Left err -> throwError err
         Right msg -> return $ Just msg
+
 
 renderError :: TraduisonsError -> String
 renderError (TErr flag msg) = case flag of
