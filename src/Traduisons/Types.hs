@@ -20,7 +20,7 @@ data TraduisonsError = TErr TraduisonsErrorFlag String
   deriving (Show, Eq)
 
 instance Error TraduisonsError where
-  strMsg s = TErr UnknownError s
+  strMsg = TErr UnknownError
 
 type TraduisonsState = TokenRef
 newtype TokenRef = TokenRef { unTokenRef :: IORef TokenData }
