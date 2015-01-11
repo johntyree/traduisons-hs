@@ -50,8 +50,6 @@ runCommands appState cmds = do
   initial <- maybe (liftIO createAppState) return appState
   runErrorT . runStateT app $ initial
 
--- Consider representing errors as an (Error String) value as part of a
--- TranslationResult ADT.
 runCommand :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
 runCommand c = do
   msg <- runCommand' c
