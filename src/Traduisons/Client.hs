@@ -66,6 +66,8 @@ runCommand' (SetToLanguage l) = const Nothing <$> modify setToLang
 runCommand' (Translate rawMsg) = go (1 :: Int)
   where
     go n = do
+      AppState fromLang' _ _ _ <- get
+      when (getLanguage fromLang' == "auto") $ void $ runCommand' (DetectLanguage rawMsg)
       AppState fromLang toLang _ tradState <- get
       let message = Message fromLang rawMsg
       translation <- liftIO . runTraduisons tradState $ translate toLang message
@@ -75,7 +77,30 @@ runCommand' (Translate rawMsg) = go (1 :: Int)
           then renewToken >> go 0
           else throwError err
         Right msg -> return $ Just msg
+
+runCommand' (DetectLanguage rawMsg) = do
+  result <- withTokenRefresh (detectLanguage rawMsg)
+  case result of
+    Nothing -> throwError $ TErr LanguageDetectionError "Failed to detect language"
+    Just l -> runCommand' (SetFromLanguage (getLanguage l))
+
 runCommand' Exit = throwError $ TErr TraduisonsExit "Exit"
+
+ -- unTraduisons :: ReaderT TraduisonsState (ErrorT TraduisonsError IO) a }
+withTokenRefresh :: Traduisons a -> StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
+withTokenRefresh f = go (1 :: Int)
+  where
+    go n = do
+      AppState _ _ _ tradState <- get
+      result <- liftIO . runTraduisons tradState $ f
+      case result of
+        Left err@(TErr TokenExpiredError _) ->
+          if n > 0
+          then renewToken >> go (n-1)
+          {- else throwError "No valid access token available" -}
+          else throwError err
+        Left err -> throwError err
+        Right msg -> return $ Just msg
 
 renderError :: TraduisonsError -> String
 renderError (TErr flag msg) = case flag of
@@ -85,4 +110,5 @@ renderError (TErr flag msg) = case flag of
   NoStringError -> msg
   TraduisonsExit -> msg
   UnknownError -> msg
+  LanguageDetectionError -> "Unable to detect language: " ++ msg
   TokenExpiredError -> "Renewing expired token..."

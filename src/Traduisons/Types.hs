@@ -84,6 +84,7 @@ instance Eq AppState where
 data Command = SetFromLanguage String
              | SetToLanguage String
              | Translate String
+             | DetectLanguage String
              | SwapLanguages
              | Exit
   deriving (Show, Eq)
@@ -93,6 +94,7 @@ data TraduisonsErrorFlag = ArgumentOutOfRangeException
                          | NoStringError
                          | TraduisonsExit
                          | TokenExpiredError
+                         | LanguageDetectionError
                          | UnknownError
                          | UnrecognizedJSONError
   deriving (Show, Eq, Enum)
