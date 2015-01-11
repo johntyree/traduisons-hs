@@ -81,14 +81,17 @@ asRichText s = T.pack $ concat renderedLines
     lines' = splitOn "\n" s
     renderedLines = div hangingIndent [intercalate "<br/>" lines']
 
-hangingIndent :: String
-hangingIndent = "margin-left: 8px; text-indent: -8px"
 
-indent :: String
-indent = "margin-left: 5px"
+newtype Style = Style { unStyle :: String }
 
-div :: String -> [String] -> [String]
-div s l = ["<div style=\"" ++ s ++ "\">"] ++ l ++ ["</div>"]
+hangingIndent :: Style
+hangingIndent = Style "margin-left: 8px; text-indent: -8px"
+
+indent :: Style
+indent = Style "margin-left: 5px"
+
+div :: Style -> [String] -> [String]
+div (Style s) l = ["<div style=\"" ++ s ++ "\">"] ++ l ++ ["</div>"]
 
 renderHistory :: [AppState] -> T.Text
 renderHistory appStates = T.unlines renderedLines
