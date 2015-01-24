@@ -18,11 +18,17 @@ apiTranslateEndpoint = "Translate"
 apiDetectEndpoint :: String
 apiDetectEndpoint = "Detect"
 
+apiLanguageListEndpoint :: String
+apiLanguageListEndpoint = "GetLanguagesForTranslate"
+
 translationURL :: String
 translationURL = intercalate "/" [apiDomain, apiPath, apiTranslateEndpoint]
 
 detectionURL :: String
 detectionURL = intercalate "/" [apiDomain, apiPath, apiDetectEndpoint]
+
+languageListURL :: String
+languageListURL = intercalate "/" [apiDomain, apiPath, apiLanguageListEndpoint]
 
 tokenURL :: String
 tokenURL = "https://datamarket.accesscontrol.windows.net/v2/OAuth2-13"

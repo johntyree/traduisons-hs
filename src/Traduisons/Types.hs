@@ -6,9 +6,9 @@ module Traduisons.Types where
 import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Applicative
+import Control.Concurrent.MVar
 import Data.Aeson
 import Data.ByteString.Char8
-import Data.IORef
 
 newtype Traduisons a = Traduisons {
   unTraduisons :: ReaderT TraduisonsState (ErrorT TraduisonsError IO) a }
@@ -22,7 +22,7 @@ instance Error TraduisonsError where
   strMsg = TErr UnknownError
 
 type TraduisonsState = TokenRef
-newtype TokenRef = TokenRef { unTokenRef :: IORef TokenData }
+newtype TokenRef = TokenRef { unTokenRef :: MVar TokenData }
 
 liftErrorT :: ErrorT TraduisonsError IO a -> Traduisons a
 liftErrorT = Traduisons . lift

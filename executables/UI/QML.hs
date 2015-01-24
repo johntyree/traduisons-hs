@@ -5,6 +5,8 @@ module UI.QML where
 import Prelude hiding (div)
 import Control.Concurrent
 import Control.Monad
+import Control.Monad.Error
+import Control.Monad.State
 import Control.Applicative
 import Data.Either
 import Data.IORef
@@ -16,9 +18,9 @@ import qualified Data.Text as T
 
 import Paths_traduisons
 
-import Traduisons.Types
+import Traduisons.API
 import Traduisons.Client
-import Traduisons.Util (safeHead)
+import Traduisons.Types
 
 type GUIAppStateResult = Either TraduisonsError T.Text
 
@@ -33,7 +35,8 @@ defaultGUIAppState = GAS False (Right "")
 runGUI :: AppState -> IO ()
 runGUI initialAppState = do
     qmlPath <- getDataFileName "executables/UI/ui.qml"
-    state <- newIORef (defaultGUIAppState [initialAppState])
+    asyncRenewToken initialAppState
+    guiAppState <- newIORef (defaultGUIAppState [initialAppState])
     langPairSignal <- newSignalKey
     gasResultSignal <- newSignalKey
     gasIsLoadingSignal <- newSignalKey
@@ -43,18 +46,18 @@ runGUI initialAppState = do
         signals :: [SignalKey (IO ())]
     cls <- newClass [
         defPropertySigRO' "result" gasResultSignal $ \_ ->
-          gasResultProperty state
+          gasResultProperty guiAppState
       , defPropertySigRO' "clipboardContents" gasResultSignal $ \_ ->
-          clipboardContentsProperty state
+          clipboardContentsProperty guiAppState
       , defPropertySigRO' "langPair" langPairSignal $ \_ ->
-          langPairProperty state
+          langPairProperty guiAppState
       , defPropertySigRO' "isLoading" gasIsLoadingSignal $ \_ ->
-          gasIsLoadingProperty state
+          gasIsLoadingProperty guiAppState
       , defPropertySigRO' "isError" isErrorSignal $ \_ ->
-          isErrorProperty state
+          isErrorProperty guiAppState
       , defMethod' "handleInput" $ \obj txt -> do
           let update = fireSignals signals obj
-          handleInputMethod update state txt
+          handleInputMethod update guiAppState txt
       ]
     ctx <- newObject cls ()
     runEngineLoop defaultEngineConfig {
@@ -64,13 +67,16 @@ runGUI initialAppState = do
   where
     fireSignals keys obj = mapM_ (`fireSignal` obj) keys
 
+asyncRenewToken :: AppState -> IO ()
+asyncRenewToken = void . forkIO . void . runErrorT  . runStateT renewToken
+
 clipboardContentsProperty :: IORef GUIAppState -> IO T.Text
-clipboardContentsProperty state =  render <$> readIORef state
+clipboardContentsProperty guiAppState =  render <$> readIORef guiAppState
   where render = either (const "") id . gasResult
 
 gasResultProperty :: IORef GUIAppState -> IO T.Text
-gasResultProperty state = do
-  gas <- readIORef state
+gasResultProperty guiAppState = do
+  gas <- readIORef guiAppState
   return $ case gasResult gas of
     Left msg -> asRichText (renderError msg)
     Right _ -> renderHistory (gasAppStates gas)
@@ -99,8 +105,8 @@ renderHistory appStates = T.unlines renderedLines
         renderedLines =  concatMap (fromMaybe [] . render) (reverse appStates)
         render :: AppState -> Maybe [T.Text]
         render appState = do
-            fM <- fmap fromMsg <$> safeHead . asHistory $ appState
-            tM <- fmap toMsg <$> safeHead . asHistory $ appState
+            fM <- fmap fromMsg <$> listToMaybe . asHistory $ appState
+            tM <- fmap toMsg <$> listToMaybe . asHistory $ appState
             guard $ not (null tM)
             guard $ not (null fM)
             let fL = getLanguage . asFromLang $ appState
@@ -117,7 +123,7 @@ renderHistory appStates = T.unlines renderedLines
         fromMsg _ = ""
 
 langPairProperty :: IORef GUIAppState -> IO T.Text
-langPairProperty state = render . safeHead . gasAppStates <$> readIORef state
+langPairProperty guiAppState = render . listToMaybe . gasAppStates <$> readIORef guiAppState
     where render :: Maybe AppState -> T.Text
           render Nothing = "???"
           render (Just appState) =
@@ -126,25 +132,25 @@ langPairProperty state = render . safeHead . gasAppStates <$> readIORef state
             in T.concat . map T.pack $ [fr, " | ", to, ":"]
 
 gasIsLoadingProperty :: IORef GUIAppState -> IO Bool
-gasIsLoadingProperty state = gasIsLoading <$> readIORef state
+gasIsLoadingProperty guiAppState = gasIsLoading <$> readIORef guiAppState
 
 isErrorProperty :: IORef GUIAppState -> IO Bool
-isErrorProperty state = isLeft . gasResult <$> readIORef state
+isErrorProperty guiAppState = isLeft . gasResult <$> readIORef guiAppState
 
 handleInputMethod :: IO () -> IORef GUIAppState -> T.Text -> IO ()
-handleInputMethod updateGUI state txt = do
-    modifyIORef state $ \s -> s { gasIsLoading = True }
+handleInputMethod updateGUI guiAppState txt = do
+    modifyIORef guiAppState $ \s -> s { gasIsLoading = True }
     void updateGUI
-    let execute = readIORef state >>= handleInput txt >>= writeIORef state
+    let execute = readIORef guiAppState >>= handleInput txt >>= writeIORef guiAppState
     void . forkIO $ execute >> updateGUI
 
 handleInput :: T.Text -> GUIAppState -> IO GUIAppState
 handleInput input initialGuiAppState = do
     let commands = parseInput (T.unpack input)
         appStates = gasAppStates guiAppState
-        initialAppState = safeHead appStates
+        initialAppState = listToMaybe appStates
         guiAppState = initialGuiAppState { gasIsLoading = False }
-    result <- runCommands initialAppState commands
+    result <- runErrorT $ runCommands initialAppState commands
     case result of
         Left err -> return $ guiAppState { gasResult = Left err }
         Right (msg, appState) -> return $

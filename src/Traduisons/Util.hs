@@ -2,7 +2,6 @@
 
 module Traduisons.Util where
 
-import Control.Applicative
 import Control.Monad.Error
 import Data.List
 import Data.Maybe
@@ -10,6 +9,8 @@ import Data.Time.Clock.POSIX
 import Network.HTTP.Client as N
 import Network.HTTP.Types
 import System.Process
+import System.Exit
+import Control.Exception
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 
@@ -23,10 +24,6 @@ trace s = join (Trace.trace . prefix s . show)
 
 trace' :: Show a => a -> a
 trace' = trace ""
-
-safeHead :: [a] -> Maybe a
-safeHead [] = Nothing
-safeHead (x:_) = Just x
 
 liftEither :: (Error e, Monad m, MonadError e (t e m)) => Either e a -> t e m a
 liftEither = either throwError return
@@ -58,8 +55,14 @@ nativeCurl url httpMethod hdrs formData man = do
   let ua = ("User-Agent", "traduisons/2.0.0")
       addHeaders h r = r { requestHeaders = ua:h ++ requestHeaders r }
       req = addHeaders hdrs req'
-  resp <- liftIO $ httpLbs req man
-  return . BL.toStrict . responseBody $ resp
+  -- WTF IS GOING ON HERE?
+  let trySomeException = try $ httpLbs req man
+      trySomeException :: IO (Either SomeException (Response BL.ByteString))
+  resp <- lift . liftIO $ trySomeException
+  return $ trace (show resp) ()
+  case resp of
+    Left err -> throwError $ TErr CurlError (show err)
+    Right body -> return . BL.toStrict . responseBody $ body
 
 -- Working around broken TLS (https://github.com/vincenthz/hs-tls/issues/87)
 systemCurl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header]
@@ -76,8 +79,12 @@ systemCurl url httpMethod hdrs formData _ = do
               POST -> return $ addFlag "--data-urlencode" dataAsArg
               _ -> let err = "Curl doesn't know " ++ show httpMethod
                    in throwError $ TErr CurlError err
-  let args = "-s" : url : map B.unpack (argHdrs ++ argData)
-  B.pack <$> liftIO (readProcess "curl" args "")
+  let args = "-s" : "-S" : url : map B.unpack (argHdrs ++ argData)
+  curlResult <- liftIO (readProcessWithExitCode "curl" args "")
+  case curlResult of
+    (ExitSuccess, stdout, _) -> return (B.pack stdout)
+    (ExitFailure _, _, stderr) -> throwError $ TErr CurlError stderr
+
 
 -- Remove the BOM from Unicode string
 stripBOM :: String -> String

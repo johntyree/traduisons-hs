@@ -13,23 +13,14 @@ import Traduisons.Types
 helpMsg :: String
 helpMsg = "Help yourself."
 
-runTest :: String -> IO (Either TraduisonsError (Maybe Message, AppState))
+runTest :: String -> ErrorT TraduisonsError IO (Maybe Message, AppState)
 runTest input = do
   let commands = concatMap parseInput $ splitOn ";" input
-      action st = runCommands (Just st) commands
-  createAppState >>= action
+  runCommands Nothing commands
 
-createAppState :: IO AppState
-createAppState =
-  let new = return . AppState (Language "auto") (Language "en") []
-  in runErrorT newState >>= either (error . show) new
-
-renewToken :: StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
-renewToken = do
-  appState <- get
-  traduisonsState <- lift newState
-  put appState { asTraduisonsState = traduisonsState }
-  return Nothing
+createAppState :: ErrorT TraduisonsError IO AppState
+createAppState = liftIO mkTraduisonsState >>= new
+  where new = return . AppState (Language "auto") (Language "en") []
 
 parseInput :: String -> [Command]
 parseInput ('/':s) = SwapLanguages : parseInput s
@@ -44,11 +35,11 @@ parseInput s
   | otherwise = [Translate s]
 
 runCommands :: Maybe AppState -> [Command]
-            -> IO (Either TraduisonsError (Maybe Message, AppState))
+            -> ErrorT TraduisonsError IO (Maybe Message, AppState)
 runCommands appState cmds = do
   let app = foldM (const runCommand) Nothing cmds
-  initial <- maybe (liftIO createAppState) return appState
-  runErrorT . runStateT app $ initial
+  initial <- maybe createAppState return appState
+  runStateT app initial
 
 runCommand :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
 runCommand c = do
@@ -81,7 +72,6 @@ runCommand' (DetectLanguage rawMsg) = do
     Nothing -> throwError $ TErr LanguageDetectionError "Failed to detect language"
     Just l -> runCommand' (SetFromLanguage (getLanguage l))
 
-
 withTokenRefresh :: Traduisons a -> StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
 withTokenRefresh f = go (1 :: Int)
   where
@@ -96,7 +86,6 @@ withTokenRefresh f = go (1 :: Int)
           else throwError err
         Left err -> throwError err
         Right msg -> return $ Just msg
-
 
 renderError :: TraduisonsError -> String
 renderError (TErr flag msg) = case flag of

@@ -1,21 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Traduisons.API ( newState
+module Traduisons.API ( authorizedRequest
                       , detectLanguage
-                      , translate
+                      , getLanguagesForTranslate
+                      , mkTraduisonsState
+                      , newState
+                      , renewToken
                       , runTraduisons
-                      , authorizedRequest
+                      , translate
                       ) where
 
 import Control.Applicative
+import Control.Concurrent.MVar
 import Control.Monad.Error
 import Control.Monad.Reader
+import Control.Monad.State
 import Data.Aeson
-import Data.IORef
 import Data.List
 import Data.List.Split
 import Data.Maybe
-import Text.Read
+import qualified Text.Read as T
 import Network.HTTP.Client as N
 import Network.HTTP.Client.TLS as N
 import Network.HTTP.Types
@@ -27,6 +31,12 @@ import Traduisons.Resources
 import Traduisons.Types
 import Traduisons.Util
 
+
+getLanguagesForTranslate :: Traduisons ()
+getLanguagesForTranslate = do
+  languages <- authorizedRequest languageListURL []
+  return $ trace languages ()
+  return ()
 
 detectLanguage :: String -> Traduisons Language
 detectLanguage s = do
@@ -53,20 +63,29 @@ authorizedRequest url urlData' = do
       urlData token = fmap wrap <$> ("appId", "Bearer " ++ token) : urlData'
   man <- liftIO $ N.newManager N.defaultManagerSettings
   tokenRef <- unTokenRef <$> ask
-  token <- (trToken . tdToken) <$> liftIO (readIORef tokenRef)
+  token <- (trToken . tdToken) <$> liftIO (readMVar tokenRef)
   let hdrs           = headers token
       formData       = urlData token
-  curlResult <- liftErrorT $ B.toString <$> curl url GET hdrs formData man
+  curlResult <- B.toString <$> liftErrorT (curl url GET hdrs formData man)
   let decodedAndStripped = convertStupidUnicodeNewline . stripBOM $ curlResult
       defaultError = Left $ TErr NoStringError decodedAndStripped
-      maybeResult = Right <$> readMaybe decodedAndStripped
+      -- FIXME: It doesn't really make sense to do `read` here.
+      -- Data.Aeson.decode :: BL.ByteString -> Maybe Value ?
+      maybeResult = Right <$> T.readMaybe decodedAndStripped
       deserialized = fromMaybe defaultError maybeResult
   result <- liftErrorT . liftEither $ deserialized
   case checkException result of
     Nothing -> return result
     Just err -> throwError err
 
-newState :: ErrorT TraduisonsError IO TraduisonsState
+renewToken :: StateT AppState (ErrorT TraduisonsError IO) ()
+renewToken = do
+  appState <- get
+  let traduisonsState = asTraduisonsState appState
+  tokenData <- lift newState
+  liftIO $ putMVar (unTokenRef traduisonsState) tokenData
+
+newState :: ErrorT TraduisonsError IO TokenData
 newState = do
   man <- liftIO $ N.newManager N.tlsManagerSettings
   clientSecret <- liftIO readClientSecret
@@ -74,8 +93,7 @@ newState = do
   bytes <- curl tokenURL POST headers formData man
   now <- liftIO currentTime
   tokenResponse <- liftEither $ parseTokenResponse bytes
-  let tokenData = TokenData (trExpiresIn tokenResponse + now) tokenResponse
-  liftIO $ TokenRef <$> newIORef tokenData
+  return $ TokenData (trExpiresIn tokenResponse + now) tokenResponse
   where
     headers = [("User-Agent", "traduisons/2.0.0")]
     tokenRequestData cs = [
@@ -83,6 +101,9 @@ newState = do
       ("client_secret", Just cs),
       ("grant_type", Just "client_credentials"),
       ("scope", Just $ B.pack apiDomain)]
+
+mkTraduisonsState :: IO TraduisonsState
+mkTraduisonsState = TokenRef <$> newEmptyMVar
 
 parseTokenResponse :: B.ByteString -> Either TraduisonsError TokenResponse
 parseTokenResponse jsonBytes = fromJSONBytes $ BL.fromStrict jsonBytes
