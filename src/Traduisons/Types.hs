@@ -92,7 +92,11 @@ data TraduisonsErrorFlag = ArgumentOutOfRangeException
                          | CurlError
                          | NoStringError
                          | TraduisonsExit
-                         | TokenExpiredError
+                         {- | TokenExpiredError -}
+                         -- Amazingly, Microsoft has not documented the
+                         -- possible exceptions that the translator API might
+                         -- return, and they change them unannounced.
+                         | ArgumentException
                          | LanguageDetectionError
                          | UnknownError
                          | UnrecognizedJSONError

@@ -79,7 +79,7 @@ withTokenRefresh f = go (1 :: Int)
       AppState _ _ _ tradState <- get
       result <- liftIO . runTraduisons tradState $ f
       case result of
-        Left err@(TErr TokenExpiredError _) ->
+        Left err@(TErr ArgumentException _) ->
           if n > 0
           then renewToken >> go (n-1)
           {- else throwError "No valid access token available" -}
@@ -96,4 +96,5 @@ renderError (TErr flag msg) = case flag of
   TraduisonsExit -> msg
   UnknownError -> msg
   LanguageDetectionError -> "Unable to detect language: " ++ msg
-  TokenExpiredError -> "Renewing expired token..."
+  -- TokenExpiredError -> "Renewing expired token..."
+  ArgumentException -> "Renewing expired token..."
