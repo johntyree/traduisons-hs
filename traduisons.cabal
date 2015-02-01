@@ -87,7 +87,7 @@ library
     -- other-modules:
     other-extensions:  OverloadedStrings
                      , GeneralizedNewtypeDeriving
-    ghc-options:       -Wall -threaded
+    ghc-options:       -Wall
     build-depends:     base >=4.7 && <4.8
                      , aeson
                      , bytestring
