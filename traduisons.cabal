@@ -63,7 +63,7 @@ executable traduisons
   ghc-options:         -Wall -threaded
   build-tools:         c2hs
   if flag(gui)
-    build-depends:       base >=4.8 && <4.9
+    build-depends:       base
                        , hsqml
                        , mtl
                        , readline
@@ -88,7 +88,7 @@ library
     other-extensions:  OverloadedStrings
                      , GeneralizedNewtypeDeriving
     ghc-options:       -Wall
-    build-depends:     base >=4.8 && <4.9
+    build-depends:     base
                      , aeson
                      , bytestring
                      , HTTP
@@ -108,7 +108,7 @@ test-suite test
     hs-source-dirs:     tests
     main-is:            TestMain.hs
     Ghc-Options:        -Wall -threaded
-    build-depends:      base >=4.8 && <4.9
+    build-depends:      base
                       , tasty >= 0.7
                       , tasty-hunit
                       , tasty-rerun
