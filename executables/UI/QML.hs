@@ -6,9 +6,8 @@ module UI.QML where
 import Prelude hiding (div)
 import Control.Concurrent
 import Control.Monad
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State
-import Control.Applicative
 import Data.Either
 import Data.IORef
 import Data.List
@@ -69,7 +68,7 @@ runGUI initialAppState = do
     fireSignals keys obj = mapM_ (`fireSignal` obj) keys
 
 asyncRenewToken :: AppState -> IO ()
-asyncRenewToken = void . forkIO . void . runErrorT  . runStateT renewToken
+asyncRenewToken = void . forkIO . void . runExceptT  . runStateT renewToken
 
 clipboardContentsProperty :: IORef GUIAppState -> IO T.Text
 clipboardContentsProperty guiAppState =  render <$> readIORef guiAppState
@@ -151,7 +150,7 @@ handleInput input initialGuiAppState = do
         appStates = gasAppStates guiAppState
         initialAppState = listToMaybe appStates
         guiAppState = initialGuiAppState { gasIsLoading = False }
-    result <- runErrorT $ runCommands initialAppState commands
+    result <- runExceptT $ runCommands initialAppState commands
     case result of
         Left err -> return $ guiAppState { gasResult = Left err }
         Right (msg, appState) -> return $
