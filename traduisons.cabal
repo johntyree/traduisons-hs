@@ -64,9 +64,9 @@ executable traduisons
   build-tools:         c2hs
   if flag(gui)
     build-depends:       base
+                       , haskeline
                        , hsqml
                        , mtl
-                       , readline
                        , split
                        , text
                        , traduisons
@@ -97,7 +97,6 @@ library
                      , http-types
                      , mtl
                      , process
-                     , readline
                      , split
                      , time
                      , utf8-string

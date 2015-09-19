@@ -1,8 +1,7 @@
-flags: {}
+flags:
 packages:
 - '.'
-extra-deps:
-  - hsqml-0.3.3.0
-  - readline-1.0.3.0
-  - tasty-rerun-1.1.4
-resolver: lts-2.14
+- location: 'deps/hsqml-0.3.3.0'
+  extra-dep: true
+
+resolver: lts-3.3

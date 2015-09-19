@@ -6,7 +6,7 @@ import Control.Monad
 import Control.Monad.Error
 import Control.Monad.State
 import Data.Maybe
-import System.Console.Readline (addHistory, readline)
+import System.Console.Haskeline (InputT, runInputT, defaultSettings, getInputLine)
 
 import Traduisons.Client
 import Traduisons.API
@@ -30,15 +30,15 @@ mainCLI = do
     Left err -> putStrLn ("Failed to initialize: " ++ renderError err)
     Right appState -> do
       void $ runErrorT (runStateT renewToken appState)
-      loop appState
+      runInputT defaultSettings (loop appState)
   where
     loop appState = do
       let promptString = renderAppState appState
       input <- readEvalPrint promptString parseInput
       case input of
-        Nothing -> exitApp
+        Nothing -> liftIO exitApp
         Just commands -> do
-          maybeNewState <- interpretCommands (Just appState) commands
+          maybeNewState <- liftIO $ interpretCommands (Just appState) commands
           loop $ fromMaybe appState maybeNewState
 
 exitApp :: IO ()
@@ -54,14 +54,13 @@ interpretCommands appState commands = do
       when (isJust msg) $ putStrLn . render . fromJust $ msg
       return $ Just s
 
-readEvalPrint :: String -> (String -> a) -> IO (Maybe a)
+readEvalPrint :: String -> (String -> a) -> InputT IO (Maybe a)
 readEvalPrint prompt f = do
-   maybeLine <- readline prompt
-   case maybeLine of
+  maybeLine <- getInputLine prompt
+  case maybeLine of
     Nothing   -> return Nothing -- EOF / control-d
-    Just "?"  -> putStrLn helpMsg >> return (Just (f ""))
-    Just line -> do addHistory line
-                    return . Just $ f line
+    Just "?"  -> liftIO $ putStrLn helpMsg >> return (Just (f ""))
+    Just line -> return . Just $ f line
 
 renderAppState :: AppState -> String
 renderAppState (AppState (Language fL) (Language tL) _ _) =
