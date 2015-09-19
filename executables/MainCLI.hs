@@ -3,7 +3,7 @@
 module Main where
 
 import Control.Monad
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State
 import Data.Maybe
 import System.Console.Haskeline (InputT, runInputT, defaultSettings, getInputLine)
@@ -11,25 +11,14 @@ import System.Console.Haskeline (InputT, runInputT, defaultSettings, getInputLin
 import Traduisons.Client
 import Traduisons.API
 import Traduisons.Types
-import qualified UI.QML as Qui
 
 main :: IO ()
-main = mainGUI
-
-mainGUI :: IO ()
-mainGUI = do
-  eitherAppState <- runErrorT createAppState
-  case eitherAppState of
-    Left err -> putStrLn ("Failed to initialize: " ++ renderError err)
-    Right appState -> Qui.runGUI appState
-
-mainCLI :: IO ()
-mainCLI = do
-  eitherAppState <- runErrorT createAppState
+main = do
+  eitherAppState <- runExceptT createAppState
   case eitherAppState of
     Left err -> putStrLn ("Failed to initialize: " ++ renderError err)
     Right appState -> do
-      void $ runErrorT (runStateT renewToken appState)
+      void $ runExceptT (runStateT renewToken appState)
       runInputT defaultSettings (loop appState)
   where
     loop appState = do
@@ -47,7 +36,7 @@ exitApp = return ()
 interpretCommands :: Maybe AppState -> [Command] -> IO (Maybe AppState)
 interpretCommands appState commands = do
   let render = msgBody
-  result <- runErrorT $ runCommands appState commands
+  result <- runExceptT $ runCommands appState commands
   case result of
     Left err -> putStrLn (renderError err) >> return Nothing
     Right (msg, s) -> do
