@@ -34,6 +34,7 @@ apiTests = testGroup "API tests"
       assertRight (mkReq detectionURL)
   ]
 
+
 utilTests :: TestTree
 utilTests = testGroup "Util tests"
   [ testCase "Strip unicode BOM" $

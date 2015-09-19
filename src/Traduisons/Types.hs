@@ -84,14 +84,12 @@ data Command = SetFromLanguage String
              | Exit
   deriving (Show, Eq)
 
+{- Microsoft does not appear to have documented the possible exceptions that
+   the translator API might return, and they change them unannounced. -}
 data TraduisonsErrorFlag = ArgumentOutOfRangeException
                          | CurlError
                          | NoStringError
                          | TraduisonsExit
-                         {- | TokenExpiredError -}
-                         -- Amazingly, Microsoft has not documented the
-                         -- possible exceptions that the translator API might
-                         -- return, and they change them unannounced.
                          | ArgumentException
                          | LanguageDetectionError
                          | UnknownError

@@ -1,4 +1,4 @@
-srcdeps/
 SECRET
 cabal.sandbox.config
 .stack-work
+deps/

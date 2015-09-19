@@ -94,6 +94,7 @@ newState = do
   tokenResponse <- liftEither $ parseTokenResponse bytes
   return $ TokenData (trExpiresIn tokenResponse + now) tokenResponse
   where
+    -- FIXME: pull header name out of Network...Types?
     headers = [("User-Agent", "traduisons/2.0.0")]
     tokenRequestData cs = [
       ("client_id", Just clientID),
