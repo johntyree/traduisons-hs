@@ -1,8 +1,7 @@
 
 module Traduisons.Client where
 
-import Control.Applicative
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State
 import Data.List
 import Data.List.Split
@@ -13,12 +12,12 @@ import Traduisons.Types
 helpMsg :: String
 helpMsg = "Help yourself."
 
-runTest :: String -> ErrorT TraduisonsError IO (Maybe Message, AppState)
+runTest :: String -> ExceptT TraduisonsError IO (Maybe Message, AppState)
 runTest input = do
   let commands = concatMap parseInput $ splitOn ";" input
   runCommands Nothing commands
 
-createAppState :: ErrorT TraduisonsError IO AppState
+createAppState :: ExceptT TraduisonsError IO AppState
 createAppState = liftIO mkTraduisonsState >>= new
   where new = return . AppState (Language "auto") (Language "en") []
 
@@ -35,19 +34,19 @@ parseInput s
   | otherwise = [Translate s]
 
 runCommands :: Maybe AppState -> [Command]
-            -> ErrorT TraduisonsError IO (Maybe Message, AppState)
+            -> ExceptT TraduisonsError IO (Maybe Message, AppState)
 runCommands appState cmds = do
   let app = foldM (const runCommand) Nothing cmds
   initial <- maybe createAppState return appState
   runStateT app initial
 
-runCommand :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
+runCommand :: Command -> StateT AppState (ExceptT TraduisonsError IO) (Maybe Message)
 runCommand c = do
   msg <- runCommand' c
   modify (\a -> a { asHistory = (c, msg) : asHistory a })
   return msg
 
-runCommand' :: Command -> StateT AppState (ErrorT TraduisonsError IO) (Maybe Message)
+runCommand' :: Command -> StateT AppState (ExceptT TraduisonsError IO) (Maybe Message)
 runCommand' Exit = throwError $ TErr TraduisonsExit "Exit"
 runCommand' SwapLanguages = get >>= \aS -> from aS >> to aS
   where from = runCommand' . SetFromLanguage . getLanguage . asToLang
@@ -72,7 +71,7 @@ runCommand' (DetectLanguage rawMsg) = do
     Nothing -> throwError $ TErr LanguageDetectionError "Failed to detect language"
     Just l -> runCommand' (SetFromLanguage (getLanguage l))
 
-withTokenRefresh :: Traduisons a -> StateT AppState (ErrorT TraduisonsError IO) (Maybe a)
+withTokenRefresh :: Traduisons a -> StateT AppState (ExceptT TraduisonsError IO) (Maybe a)
 withTokenRefresh f = go (1 :: Int)
   where
     go n = do

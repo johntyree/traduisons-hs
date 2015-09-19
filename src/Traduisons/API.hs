@@ -10,9 +10,8 @@ module Traduisons.API ( authorizedRequest
                       , translate
                       ) where
 
-import Control.Applicative
 import Control.Concurrent.MVar
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.Aeson
@@ -78,14 +77,14 @@ authorizedRequest url urlData' = do
     Nothing -> return result
     Just err -> throwError err
 
-renewToken :: StateT AppState (ErrorT TraduisonsError IO) ()
+renewToken :: StateT AppState (ExceptT TraduisonsError IO) ()
 renewToken = do
   appState <- get
   let traduisonsState = asTraduisonsState appState
   tokenData <- lift newState
   liftIO $ putMVar (unTokenRef traduisonsState) tokenData
 
-newState :: ErrorT TraduisonsError IO TokenData
+newState :: ExceptT TraduisonsError IO TokenData
 newState = do
   man <- liftIO $ N.newManager N.tlsManagerSettings
   clientSecret <- liftIO readClientSecret

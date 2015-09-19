@@ -3,33 +3,29 @@
 
 module Traduisons.Types where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.Reader
-import Control.Applicative
 import Control.Concurrent.MVar
 import Data.Aeson
 import Data.ByteString.Char8
 
 newtype Traduisons a = Traduisons {
-  unTraduisons :: ReaderT TraduisonsState (ErrorT TraduisonsError IO) a }
+  unTraduisons :: ReaderT TraduisonsState (ExceptT TraduisonsError IO) a }
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader TraduisonsState,
             MonadError TraduisonsError)
 
 data TraduisonsError = TErr TraduisonsErrorFlag String
   deriving (Show, Eq)
 
-instance Error TraduisonsError where
-  strMsg = TErr UnknownError
-
 type TraduisonsState = TokenRef
 newtype TokenRef = TokenRef { unTokenRef :: MVar TokenData }
 
-liftErrorT :: ErrorT TraduisonsError IO a -> Traduisons a
+liftErrorT :: ExceptT TraduisonsError IO a -> Traduisons a
 liftErrorT = Traduisons . lift
 
 runTraduisons :: TraduisonsState -> Traduisons a
               -> IO (Either TraduisonsError a)
-runTraduisons = flip $ (runErrorT .) . runReaderT . unTraduisons
+runTraduisons = flip $ (runExceptT .) . runReaderT . unTraduisons
 
 instance Show TokenRef where
   show = const "<TokenRef: API token reference>"

@@ -2,7 +2,7 @@
 
 module Traduisons.Util where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import Data.List
 import Data.Maybe
 import Data.Time.Clock.POSIX
@@ -19,20 +19,21 @@ import Traduisons.Types
 
 trace :: Show a => String -> a -> a
 trace s = join (Trace.trace . prefix s . show)
-  where prefix "" a = a
+  where prefix :: String -> String -> String
+        prefix "" a = a
         prefix p a = p ++ ": " ++ a
 
 trace' :: Show a => a -> a
 trace' = trace ""
 
-liftEither :: (Error e, Monad m, MonadError e (t e m)) => Either e a -> t e m a
+liftEither :: (Monad m, MonadError e (t e m)) => Either e a -> t e m a
 liftEither = either throwError return
 
 currentTime :: IO Seconds
 currentTime = fmap round getPOSIXTime
 
 curl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header] -> FormData
-      -> Manager -> ErrorT TraduisonsError m B.ByteString
+      -> Manager -> ExceptT TraduisonsError m B.ByteString
 curl url = if ssl then systemCurl url else nativeCurl url
   where ssl = "https" `isPrefixOf` url
 
@@ -41,7 +42,7 @@ mkReq url = let err = Left $ TErr CurlError ("Failed to parse URL: " ++ show url
             in maybe err Right (parseUrl url)
 
 nativeCurl :: MonadIO m => URL -> StdMethod -> [Header] -> FormData
-           -> Manager -> ErrorT TraduisonsError m B.ByteString
+           -> Manager -> ExceptT TraduisonsError m B.ByteString
 nativeCurl url httpMethod hdrs formData man = do
   req'' <- liftEither (mkReq url)
   req' <- case httpMethod of
@@ -66,7 +67,7 @@ nativeCurl url httpMethod hdrs formData man = do
 
 -- Working around broken TLS (https://github.com/vincenthz/hs-tls/issues/87)
 systemCurl :: (MonadIO m, Functor m) => URL -> StdMethod -> [Header]
-           -> FormData -> Manager -> ErrorT TraduisonsError m B.ByteString
+           -> FormData -> Manager -> ExceptT TraduisonsError m B.ByteString
 systemCurl url httpMethod hdrs formData _ = do
   let dataAsArg = [B.concat [a, "=", b] | (a, Just b) <- formData]
       addFlag flag argList = flag : intersperse flag argList

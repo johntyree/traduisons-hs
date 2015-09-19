@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
 
 module UI.QML where
 
@@ -116,7 +117,7 @@ renderHistory appStates = T.unlines renderedLines
                 to = div hangingIndent [color "darkblue" tL, ": ", tM]
             return $ map build [from, div indent to]
         build = T.pack . concat
-        color c t = concat ["<span style=\"color: ", c, "\">" , t , "</span>"]
+        color c t = (concat ["<span style=\"color: ", c, "\">" , t , "</span>"]) :: String
         toMsg (_, Just msg) = msgBody msg
         toMsg _ = ""
         fromMsg (Translate s, _) = s
