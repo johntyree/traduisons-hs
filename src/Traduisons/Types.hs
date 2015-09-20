@@ -26,8 +26,8 @@ data TraduisonsError = TErr TraduisonsErrorFlag String
 type TraduisonsState = TokenRef
 newtype TokenRef = TokenRef { unTokenRef :: MVar TokenData }
 
-liftErrorT :: ExceptT TraduisonsError IO a -> Traduisons a
-liftErrorT = Traduisons . lift
+liftExceptT :: ExceptT TraduisonsError IO a -> Traduisons a
+liftExceptT = Traduisons . lift
 
 -- | Runs a traduisons action
 runTraduisons :: TraduisonsState -> Traduisons a
