@@ -89,11 +89,6 @@ withTokenRefresh f = go (1 :: Int)
 renderError :: TraduisonsError -> String
 renderError (TErr flag msg) = case flag of
   ArgumentOutOfRangeException -> "Bad language code: " ++ msg
-  UnrecognizedJSONError -> msg
-  CurlError -> msg
-  NoStringError -> msg
-  TraduisonsExit -> msg
-  UnknownError -> msg
   LanguageDetectionError -> "Unable to detect language: " ++ msg
-  -- TokenExpiredError -> "Renewing expired token..."
   ArgumentException -> "Renewing expired token..."
+  e -> show e ++ ": " ++ msg
