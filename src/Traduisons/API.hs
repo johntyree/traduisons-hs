@@ -31,18 +31,15 @@ import Traduisons.Types
 import Traduisons.Util
 
 
-getLanguagesForTranslate :: Traduisons ()
-getLanguagesForTranslate = do
-  languages <- authorizedRequest languageListURL []
-  return $ trace languages ()
-  return ()
+getLanguagesForTranslate :: Traduisons [String]
+getLanguagesForTranslate = authorizedRequest languageListURL [] >>= validateResponse
 
 -- | Detect the language of a body of text
 detectLanguage :: String -> Traduisons Language
 detectLanguage s = do
   let url = detectionURL
       urlData = [("text", s)]
-  language <- authorizedRequest url urlData
+  language <- authorizedRequest url urlData >>= validateResponse
   return $ Language language
 
 -- | Given a target 'Language', convert a 'Message' to that language
@@ -54,12 +51,13 @@ translate targetLanguage message = do
       urlData = [ ("from", fromLang)
                 , ("to", toLang)
                 , ("text", msgBody message) ]
-  translatedMessage <- authorizedRequest url urlData
+  translatedMessage <- authorizedRequest url urlData >>= validateResponse
   return $ Message targetLanguage translatedMessage
 
 -- | Build a query, additionally inserting necessary authorization credentials,
--- and retrieve it, returning the results
-authorizedRequest :: URL -> [(B.ByteString, String)] -> Traduisons String
+-- and retrieve it, stripping the BOM and returning the result as a
+-- ByteString
+authorizedRequest :: URL -> [(B.ByteString, String)] -> Traduisons B.ByteString
 authorizedRequest url urlData' = do
   let wrap = Just . B.fromString
       headers token = [("Authorization", B.unwords ["Bearer", B.pack token])]
@@ -69,17 +67,23 @@ authorizedRequest url urlData' = do
   token <- (trToken . tdToken) <$> liftIO (readMVar tokenRef)
   let hdrs           = headers token
       formData       = urlData token
-  curlResult <- B.toString <$> liftErrorT (curl url GET hdrs formData man)
-  let decodedAndStripped = convertStupidUnicodeNewline . stripBOM $ curlResult
-      defaultError = Left $ TErr NoStringError decodedAndStripped
-      -- FIXME: It doesn't really make sense to do `read` here.
-      -- Data.Aeson.decode :: BL.ByteString -> Maybe Value ?
-      maybeResult = Right <$> T.readMaybe decodedAndStripped
+      strip = B.fromString . convertStupidUnicodeNewline . stripBOM . B.toString
+  strip <$> liftExceptT (curl url GET hdrs formData man)
+
+-- | Given a raw response such as from authorizeRequest, attempt to decode it
+-- into the appropriate type. This uses 'readMaybe' rather than
+-- 'Data.Aeson.decode' because a plain String type is not valid JSON and
+-- always return Nothing.
+validateResponse :: (Show a, Read a) => B.ByteString -> Traduisons a
+validateResponse response = do
+  let s = B.toString response
+      defaultError = Left $ TErr UnrecognizedJSONError s
+      maybeResult = Right <$> T.readMaybe s
       deserialized = fromMaybe defaultError maybeResult
-  result <- liftErrorT . liftEither $ deserialized
-  case checkException result of
+  result <- liftExceptT . liftEither $ deserialized
+  case checkException s of
     Nothing -> return result
-    Just err -> throwError err
+    Just err -> throwError $ trace "Validation error" err
 
 -- | Stuff a fresh auth token into the current 'AppState'
 renewToken :: StateT AppState (ExceptT TraduisonsError IO) ()

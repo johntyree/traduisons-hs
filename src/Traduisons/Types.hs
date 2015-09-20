@@ -101,7 +101,6 @@ data Command = SetFromLanguage String
 -- | Anticipated error modes
 data TraduisonsErrorFlag = ArgumentOutOfRangeException
                          | CurlError
-                         | NoStringError
                          | TraduisonsExit
                          | ArgumentException
                          | LanguageDetectionError
