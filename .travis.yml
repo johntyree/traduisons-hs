@@ -16,9 +16,9 @@ before_install:
 
 install:
   - travis_long stack +RTS -N2 -RTS setup
-  - travis_long stack +RTS -N2 -RTS build --only-snapshot
+  - travis_long stack +RTS -N2 -RTS build --only-snapshot --flag traduisons:-gui
 
 script:
-  - stack +RTS -N2 -RTS build --test --haddock
+  - stack +RTS -N2 -RTS build --pedantic --test --haddock --flag traduisons:-gui
 
     # - cabal install --only-dependencies --enable-tests -f-gui
