@@ -120,15 +120,16 @@ renderHistory appStates = T.unlines renderedLines
                 to = div hangingIndent [color "darkblue" tL, ": ", tM]
             return $ map build [from, div indent to]
         build = T.pack . concat
-        color c t = (concat ["<span style=\"color: ", c, "\">" , t , "</span>"]) :: String
+        color c t = concat ["<span style=\"color: ", c, "\">" , t , "</span>"] :: String
         toMsg (_, Just msg) = msgBody msg
         toMsg _ = ""
         fromMsg (Translate s, _) = s
         fromMsg _ = ""
 
 langPairProperty :: IORef GUIAppState -> IO T.Text
-langPairProperty guiAppState = render . listToMaybe . gasAppStates <$> readIORef guiAppState
-    where render :: Maybe AppState -> T.Text
+langPairProperty guiAppState = showLangPair <$> readIORef guiAppState
+    where showLangPair = render . listToMaybe . gasAppStates
+          render :: Maybe AppState -> T.Text
           render Nothing = "???"
           render (Just appState) =
             let fr = getLanguage . asFromLang $ appState

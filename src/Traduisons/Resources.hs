@@ -6,6 +6,8 @@ import Data.List
 import System.Environment
 import qualified Data.ByteString.Char8 as B
 
+-- FIXME: Use file path combinators here
+
 apiDomain :: String
 apiDomain = "http://api.microsofttranslator.com"
 
