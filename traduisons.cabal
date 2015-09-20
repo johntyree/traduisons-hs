@@ -81,7 +81,6 @@ executable traduisons-cli
   build-tools:         c2hs
   build-depends:       base
                      , haskeline
-                     , hsqml
                      , mtl
                      , split
                      , text

@@ -5,11 +5,6 @@ cache:
     directories:
         - $HOME/.stack/
 
-addons:
-  apt:
-    packages:
-      - qtbase5-dev
-
 before_install:
   # stack
   - mkdir -p ~/.local/bin
