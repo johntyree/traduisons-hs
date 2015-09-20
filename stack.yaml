@@ -1,7 +1,9 @@
 flags:
 packages:
 - '.'
-- location: 'deps/hsqml-0.3.3.0'
+- location:
+    git: git@github.com:johntyree/HsQML
+    commit: 3a714fe68a5a7561381a02931549e1aedcee67d8
   extra-dep: true
 
 resolver: lts-3.3
