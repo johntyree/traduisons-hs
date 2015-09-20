@@ -2,7 +2,7 @@ flags:
 packages:
 - '.'
 - location:
-    git: git@github.com:johntyree/HsQML
+    git: https://github.com/johntyree/HsQML.git
     commit: 3a714fe68a5a7561381a02931549e1aedcee67d8
   extra-dep: true
 
