@@ -44,3 +44,6 @@ readClientSecret = do
 
 clientID :: B.ByteString
 clientID = "Traduisons"
+
+userAgent :: B.ByteString
+userAgent = "traduisons/2.0.0"

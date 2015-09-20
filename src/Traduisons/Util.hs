@@ -16,6 +16,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 
 import qualified Debug.Trace as Trace
 import Traduisons.Types
+import Traduisons.Resources
 
 trace :: Show a => String -> a -> a
 trace s = join (Trace.trace . prefix s . show)
@@ -53,7 +54,7 @@ nativeCurl url httpMethod hdrs formData man = do
                   in return $ urlEncodedBody (map f formData) req''
             _ -> let err = "Curl doesn't know " ++ show httpMethod
                  in throwError $ TErr CurlError err
-  let ua = ("User-Agent", "traduisons/2.0.0")
+  let ua = (hUserAgent, userAgent)
       addHeaders h r = r { requestHeaders = ua:h ++ requestHeaders r }
       req = addHeaders hdrs req'
   -- WTF IS GOING ON HERE?
