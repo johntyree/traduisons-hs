@@ -15,10 +15,10 @@ before_install:
   - chmod a+x ~/.local/bin/travis_long
 
 install:
-  - travis_long stack +RTS -N2 -RTS setup
-  - travis_long stack +RTS -N2 -RTS build --only-snapshot --flag traduisons:-gui
+  - travis_long stack setup
+  - travis_long stack build --only-snapshot --flag traduisons:-gui
 
 script:
-  - stack +RTS -N2 -RTS build --pedantic --test --haddock --flag traduisons:-gui
+  - stack build --pedantic --test --haddock --flag traduisons:-gui
 
     # - cabal install --only-dependencies --enable-tests -f-gui
