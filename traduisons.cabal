@@ -64,6 +64,7 @@ executable traduisons
   build-tools:         c2hs
   if flag(gui)
     build-depends:       base
+                       , haskeline
                        , hsqml
                        , mtl
                        , split
