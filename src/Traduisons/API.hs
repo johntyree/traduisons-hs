@@ -37,6 +37,7 @@ getLanguagesForTranslate = do
   return $ trace languages ()
   return ()
 
+-- | Detect the language of a body of text
 detectLanguage :: String -> Traduisons Language
 detectLanguage s = do
   let url = detectionURL
@@ -44,6 +45,7 @@ detectLanguage s = do
   language <- authorizedRequest url urlData
   return $ Language language
 
+-- | Given a target 'Language', convert a 'Message' to that language
 translate :: Language -> Message -> Traduisons Message
 translate targetLanguage message = do
   let url = translationURL
@@ -55,6 +57,8 @@ translate targetLanguage message = do
   translatedMessage <- authorizedRequest url urlData
   return $ Message targetLanguage translatedMessage
 
+-- | Build a query, additionally inserting necessary authorization credentials,
+-- and retrieve it, returning the results
 authorizedRequest :: URL -> [(B.ByteString, String)] -> Traduisons String
 authorizedRequest url urlData' = do
   let wrap = Just . B.fromString
@@ -77,6 +81,7 @@ authorizedRequest url urlData' = do
     Nothing -> return result
     Just err -> throwError err
 
+-- | Stuff a fresh auth token into the current 'AppState'
 renewToken :: StateT AppState (ExceptT TraduisonsError IO) ()
 renewToken = do
   appState <- get
@@ -84,6 +89,7 @@ renewToken = do
   tokenData <- lift newState
   liftIO $ putMVar (unTokenRef traduisonsState) tokenData
 
+-- | Retrieve an auth token
 newState :: ExceptT TraduisonsError IO TokenData
 newState = do
   man <- liftIO $ N.newManager N.tlsManagerSettings

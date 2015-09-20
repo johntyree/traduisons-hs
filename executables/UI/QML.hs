@@ -24,9 +24,13 @@ import Traduisons.Types
 
 type GUIAppStateResult = Either TraduisonsError T.Text
 
-data GUIAppState = GAS { gasIsLoading :: Bool
-                       , gasResult :: GUIAppStateResult
-                       , gasAppStates :: [AppState] }
+data GUIAppState = GAS {
+  -- | True when some networking action is working in the background
+    gasIsLoading :: Bool
+  -- | The outcome of the most recent command
+  , gasResult :: GUIAppStateResult
+  -- | The history of all 'AppStates' of the application thus far
+  , gasAppStates :: [AppState] }
     deriving (Show, Eq)
 
 defaultGUIAppState :: [AppState] -> GUIAppState
@@ -154,10 +158,11 @@ handleInput input initialGuiAppState = do
     case result of
         Left err -> return $ guiAppState { gasResult = Left err }
         Right (msg, appState) -> return $
-          -- If no new and old is err, then old else new
           let oldResult = gasResult guiAppState
               maybeNewResult = T.pack . msgBody <$> msg
               newResult = Right $ fromMaybe "" maybeNewResult
+              -- The finalResult is updated to newResult unless it fails *AND*
+              -- the old one is also a failure.
               finalResult = if isLeft oldResult && isNothing maybeNewResult
                             then oldResult
                             else newResult
