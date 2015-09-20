@@ -1,6 +1,24 @@
 language: haskell
 sudo: false
-ghc: 7.10
+
+cache:
+    directories:
+        - $HOME/.stack/
+
+before_install:
+  # stack
+  - mkdir -p ~/.local/bin
+  - export PATH=~/.local/bin:$PATH
+  - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v0.1.4.0/stack-0.1.4.0-x86_64-linux.tar.gz | tar xz -C ~/.local/bin
+  - travis_retry curl -L https://raw.githubusercontent.com/futurice/fum2github/master/travis_long > ~/.local/bin/travis_long
+  - chmod a+x ~/.local/bin/stack
+  - chmod a+x ~/.local/bin/travis_long
 
 install:
-    - cabal install --only-dependencies --enable-tests -f-gui
+  - travis_long stack +RTS -N2 -RTS setup
+  - travis_long stack +RTS -N2 -RTS build --only-snapshot
+
+script:
+  - stack +RTS -N2 -RTS build --test --haddock
+
+    # - cabal install --only-dependencies --enable-tests -f-gui
