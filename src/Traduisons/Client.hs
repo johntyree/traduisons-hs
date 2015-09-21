@@ -3,6 +3,7 @@ module Traduisons.Client where
 
 import Control.Monad.Except
 import Control.Monad.State
+import qualified Data.Map as M
 import Data.List
 import Data.List.Split
 
@@ -20,7 +21,14 @@ runTest input = do
 
 createAppState :: ExceptT TraduisonsError IO AppState
 createAppState = liftIO mkTraduisonsState >>= new
-  where new = return . AppState (Language "auto") (Language "en") []
+  where new = return . AppState (Language "auto") (Language "en") [] M.empty
+
+updateLanguageMap :: AppState -> ExceptT TraduisonsError IO AppState
+updateLanguageMap appState = do
+  let tState = asTraduisonsState appState
+  langResponse <- lift $ runTraduisons tState getLanguagesForTranslate
+  langs <- M.insert "auto" "auto" <$> liftEither langResponse
+  return appState { asLanguageNameCodes = langs }
 
 parseInput :: String -> [Command]
 parseInput ('/':s) = SwapLanguages : parseInput s
@@ -60,9 +68,9 @@ runCommand' (SetToLanguage l) = const Nothing <$> modify setToLang
   where setToLang appState = appState { asToLang = Language l }
 
 runCommand' (Translate rawMsg) = do
-  AppState fromLang' _ _ _ <- get
+  AppState fromLang' _ _ _ _ <- get
   when (getLanguage fromLang' == "auto") $ void $ runCommand' (DetectLanguage rawMsg)
-  AppState fromLang toLang _ _ <- get
+  AppState fromLang toLang _ _ _ <- get
   let message = Message fromLang rawMsg
   withTokenRefresh $ translate toLang message
 

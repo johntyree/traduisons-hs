@@ -8,6 +8,7 @@ import Control.Monad.Reader
 import Control.Concurrent.MVar
 import Data.Aeson
 import Data.ByteString.Char8
+import qualified Data.Map as M
 
 -- | The 'Traduisons' Monad gives you a stateful way to interact with the
 -- translation API.
@@ -87,11 +88,12 @@ data AppState = AppState
   , asToLang :: Language -- ^ The target output language
   , asHistory :: [(Command, Maybe Message)] -- ^ The collection of all inputs
                                             -- and their translations thus far.
+  , asLanguageNameCodes :: M.Map String String
   , asTraduisonsState :: TraduisonsState -- ^ The underlying translator's state
   } deriving Show
 
 instance Eq AppState where
-  AppState f l h _ == AppState f' l' h' _ = f == f' && l == l' && h == h'
+  AppState f l h _ _ == AppState f' l' h' _ _ = f == f' && l == l' && h == h'
 
 -- | Operations that transform the 'AppState' in some way
 data Command = SetFromLanguage String

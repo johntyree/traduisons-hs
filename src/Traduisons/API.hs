@@ -16,6 +16,7 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.Aeson
+import qualified Data.Map as M
 import Data.List
 import Data.List.Split
 import Data.Maybe
@@ -32,8 +33,14 @@ import Traduisons.Types
 import Traduisons.Util
 
 
-getLanguagesForTranslate :: Traduisons [String]
-getLanguagesForTranslate = authorizedRequest languageListURL [] >>= validateResponse
+-- | A lookup table from code to language *and* language to code. We're
+-- assuming that there are no language names that are also ISO 639-1 codes.
+getLanguagesForTranslate :: Traduisons (M.Map String String)
+getLanguagesForTranslate = do
+  codes <- authorizedRequest languageCodeListURL [] >>= validateResponse
+  let options = [("locale", "en-US"), ("languageCodes", show codes)]
+  names <- authorizedRequest languageNameListURL options >>= validateResponse
+  return $ M.fromList (zip (codes ++ names) (names ++ codes))
 
 -- | Detect the language of a body of text
 detectLanguage :: String -> Traduisons Language

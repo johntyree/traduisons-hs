@@ -53,5 +53,5 @@ readEvalPrint prompt f = do
     Just line -> return . Just $ f line
 
 renderAppState :: AppState -> String
-renderAppState (AppState (Language fL) (Language tL) _ _) =
+renderAppState (AppState (Language fL) (Language tL) _ _ _) =
   fL ++ "|" ++ tL ++ ": "
