@@ -3,11 +3,13 @@ module Traduisons.Client where
 
 import Control.Monad.Except
 import Control.Monad.State
+import Control.Concurrent
 import Data.List
 import Data.List.Split
 
 import Traduisons.API
 import Traduisons.Types
+import Traduisons.Util
 
 helpMsg :: String
 helpMsg = "Help yourself."
@@ -76,15 +78,22 @@ withTokenRefresh f = go (1 :: Int)
   where
     go n = do
       AppState _ _ _ tradState <- get
+      expired <- liftIO $ authTokenExpired tradState
+      when expired renewToken
       result <- liftIO . runTraduisons tradState $ f
       case result of
         Left err@(TErr ArgumentException _) ->
           if n > 0
           then renewToken >> go (n-1)
-          {- else throwError "No valid access token available" -}
           else throwError err
         Left err -> throwError err
         Right msg -> return $ Just msg
+
+authTokenExpired :: TraduisonsState -> IO Bool
+authTokenExpired tokref = do
+  now <- liftIO currentTime
+  TokenData { tdExpiresAt = expTime } <- readMVar (unTokenRef tokref)
+  return $ now >= expTime
 
 renderError :: TraduisonsError -> String
 renderError (TErr flag msg) = case flag of

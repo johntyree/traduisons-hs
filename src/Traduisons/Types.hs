@@ -44,10 +44,16 @@ data TokenResponse = TokenResponse
   , trExpiresIn :: Seconds  -- ^ The number of seconds until the token expires
   } deriving (Show, Eq)
 
+emptyTokenResponse :: TokenResponse
+emptyTokenResponse = TokenResponse "" "" "" 0
+
 data TokenData = TokenData
   { tdExpiresAt :: Seconds -- ^ The token's expiration time in epoch seconds
   , tdToken :: TokenResponse -- ^ The auth token data
   } deriving (Show, Eq)
+
+emptyTokenData :: TokenData
+emptyTokenData = TokenData 0 emptyTokenResponse
 
 instance FromJSON TokenResponse where
   parseJSON (Object o) = do

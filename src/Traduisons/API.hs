@@ -91,7 +91,7 @@ renewToken = do
   appState <- get
   let traduisonsState = asTraduisonsState appState
   tokenData <- lift newState
-  liftIO $ putMVar (unTokenRef traduisonsState) tokenData
+  void . liftIO $ swapMVar (unTokenRef traduisonsState) tokenData
 
 -- | Retrieve an auth token
 newState :: ExceptT TraduisonsError IO TokenData
@@ -112,7 +112,7 @@ newState = do
       ("scope", Just $ B.pack apiDomain)]
 
 mkTraduisonsState :: IO TraduisonsState
-mkTraduisonsState = TokenRef <$> newEmptyMVar
+mkTraduisonsState = TokenRef <$> newMVar emptyTokenData
 
 parseTokenResponse :: B.ByteString -> Either TraduisonsError TokenResponse
 parseTokenResponse jsonBytes = fromJSONBytes $ BL.fromStrict jsonBytes
