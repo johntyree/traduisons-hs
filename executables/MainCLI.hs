@@ -12,15 +12,17 @@ import Traduisons.Client
 import Traduisons.API
 import Traduisons.Types
 
+
 main :: IO ()
 main = do
-  eitherAppState <- runExceptT createAppState
+  eitherAppState <- runExceptT $ do
+    emptyAppState <- createAppState
+    -- Get an auth token before we do anything else.
+    authAppState <- snd <$> runStateT renewToken emptyAppState
+    updateLanguageMap authAppState
   case eitherAppState of
     Left err -> putStrLn ("Failed to initialize: " ++ renderError err)
-    Right appState -> do
-      -- Immediately get an auth token. This lowers our initial response time.
-      void $ runExceptT (runStateT renewToken appState)
-      runInputT defaultSettings (loop appState)
+    Right appState -> runInputT defaultSettings (loop appState)
   where
     loop appState = do
       let promptString = renderAppState appState

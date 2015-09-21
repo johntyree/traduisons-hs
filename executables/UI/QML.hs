@@ -39,8 +39,8 @@ defaultGUIAppState = GAS False (Right "")
 runGUI :: AppState -> IO ()
 runGUI initialAppState = do
     qmlPath <- getDataFileName "executables/UI/ui.qml"
-    asyncRenewToken initialAppState
     guiAppState <- newIORef (defaultGUIAppState [initialAppState])
+    asyncInitAppState guiAppState
     langPairSignal <- newSignalKey
     gasResultSignal <- newSignalKey
     gasIsLoadingSignal <- newSignalKey
@@ -71,8 +71,17 @@ runGUI initialAppState = do
   where
     fireSignals keys obj = mapM_ (`fireSignal` obj) keys
 
-asyncRenewToken :: AppState -> IO ()
-asyncRenewToken = void . forkIO . void . runExceptT  . runStateT renewToken
+asyncInitAppState :: IORef GUIAppState -> IO ()
+asyncInitAppState gsRef = void . forkIO $ do
+  gAS <- readIORef gsRef
+  let (old:olds) = gasAppStates gAS
+  new <- runExceptT $ do
+    authed <- snd <$> runStateT renewToken old
+    lift $ writeIORef gsRef gAS { gasAppStates = authed:olds }
+    updateLanguageMap authed
+  case new of
+    Left err -> writeIORef gsRef gAS { gasResult = Left err }
+    Right appState -> writeIORef gsRef gAS {gasAppStates = appState:olds}
 
 clipboardContentsProperty :: IORef GUIAppState -> IO T.Text
 clipboardContentsProperty guiAppState =  render <$> readIORef guiAppState
