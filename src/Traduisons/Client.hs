@@ -33,6 +33,7 @@ updateLanguageMap appState = do
 parseInput :: String -> [Command]
 parseInput ('/':s) = SwapLanguages : parseInput s
 parseInput "\EOT"  = [Exit]
+parseInput "?"  = [Help]
 parseInput ""      = []
 parseInput ('|':s) = [SetToLanguage s]
 parseInput s
@@ -57,6 +58,7 @@ runCommand c = do
 
 runCommand' :: Command -> StateT AppState (ExceptT TraduisonsError IO) (Maybe Message)
 runCommand' Exit = throwError $ TErr TraduisonsExit "Exit"
+runCommand' Help = get >>= throwError . TErr TraduisonsHelp . renderLanguageNames
 runCommand' SwapLanguages = get >>= \aS -> from aS >> to aS
   where from = runCommand' . SetFromLanguage . getLanguage . asToLang
         to = runCommand' . SetToLanguage . getLanguage . asFromLang
@@ -85,6 +87,7 @@ renderError (TErr flag msg) = case flag of
   ArgumentOutOfRangeException -> "Bad language code: " ++ msg
   LanguageDetectionError -> "Unable to detect language: " ++ msg
   ArgumentException -> "Renewing expired token..."
+  TraduisonsHelp -> msg
   e -> show e ++ ": " ++ msg
 
 renderLanguageNames :: AppState -> String

@@ -49,7 +49,6 @@ readEvalPrint prompt f = do
   maybeLine <- getInputLine prompt
   case maybeLine of
     Nothing   -> return Nothing -- EOF / control-d
-    Just "?"  -> liftIO $ putStrLn helpMsg >> return (Just (f ""))
     Just line -> return . Just $ f line
 
 renderAppState :: AppState -> String

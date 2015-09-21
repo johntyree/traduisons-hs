@@ -101,15 +101,21 @@ data Command = SetFromLanguage String
              | Translate String
              | DetectLanguage String
              | SwapLanguages
+             | Help
              | Exit
   deriving (Show, Eq)
 
 {- Microsoft does not appear to have documented the possible exceptions that
    the translator API might return, and they change them unannounced. -}
+-- FIXME: We can get much better error handling if we translate an array of
+-- text. See https://msdn.microsoft.com/en-us/library/ff512407.aspx
+-- Also consider retrieiving multiple translations.
+-- https://msdn.microsoft.com/en-us/library/ff512403.aspx
 -- | Anticipated error modes
 data TraduisonsErrorFlag = ArgumentOutOfRangeException
                          | CurlError
                          | TraduisonsExit
+                         | TraduisonsHelp
                          | ArgumentException
                          | LanguageDetectionError
                          | UnknownError
