@@ -84,7 +84,6 @@ executable traduisons-cli
                      , haskeline
                      , mtl
                      , split
-                     , text
                      , traduisons
   hs-source-dirs:      executables
   default-language:    Haskell2010
