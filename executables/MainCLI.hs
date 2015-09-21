@@ -18,6 +18,7 @@ main = do
   case eitherAppState of
     Left err -> putStrLn ("Failed to initialize: " ++ renderError err)
     Right appState -> do
+      -- Immediately get an auth token. This lowers our initial response time.
       void $ runExceptT (runStateT renewToken appState)
       runInputT defaultSettings (loop appState)
   where
