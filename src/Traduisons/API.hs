@@ -8,6 +8,7 @@ module Traduisons.API ( authorizedRequest
                       , renewToken
                       , runTraduisons
                       , translate
+                      , withTokenRefresh
                       ) where
 
 import Control.Concurrent.MVar
@@ -130,3 +131,25 @@ checkException s = do
   let (header, m) = break (== ':') s
       flags = [ArgumentOutOfRangeException .. UnknownError]
   flip TErr m <$> find (flip isInfixOf header . show) flags
+
+withTokenRefresh :: Traduisons a -> StateT AppState (ExceptT TraduisonsError IO) (Maybe a)
+withTokenRefresh f = go (1 :: Int)
+  where
+    go n = do
+      AppState _ _ _ _ tradState <- get
+      expired <- liftIO $ authTokenIsExpired tradState
+      when expired renewToken
+      result <- liftIO . runTraduisons tradState $ f
+      case result of
+        Left err@(TErr ArgumentException _) ->
+          if n > 0
+          then renewToken >> go (n-1)
+          else throwError err
+        Left err -> throwError err
+        Right msg -> return $ Just msg
+
+authTokenIsExpired :: TraduisonsState -> IO Bool
+authTokenIsExpired tokref = do
+  now <- liftIO currentTime
+  TokenData { tdExpiresAt = expTime } <- readMVar (unTokenRef tokref)
+  return $ now >= expTime

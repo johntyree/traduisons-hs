@@ -3,7 +3,6 @@ module Traduisons.Client where
 
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Concurrent
 import Data.List
 import Data.List.Split
 
@@ -73,31 +72,17 @@ runCommand' (DetectLanguage rawMsg) = do
     Nothing -> throwError $ TErr LanguageDetectionError "Failed to detect language"
     Just l -> runCommand' (SetFromLanguage (getLanguage l))
 
-withTokenRefresh :: Traduisons a -> StateT AppState (ExceptT TraduisonsError IO) (Maybe a)
-withTokenRefresh f = go (1 :: Int)
-  where
-    go n = do
-      AppState _ _ _ tradState <- get
-      expired <- liftIO $ authTokenExpired tradState
-      when expired renewToken
-      result <- liftIO . runTraduisons tradState $ f
-      case result of
-        Left err@(TErr ArgumentException _) ->
-          if n > 0
-          then renewToken >> go (n-1)
-          else throwError err
-        Left err -> throwError err
-        Right msg -> return $ Just msg
-
-authTokenExpired :: TraduisonsState -> IO Bool
-authTokenExpired tokref = do
-  now <- liftIO currentTime
-  TokenData { tdExpiresAt = expTime } <- readMVar (unTokenRef tokref)
-  return $ now >= expTime
-
 renderError :: TraduisonsError -> String
 renderError (TErr flag msg) = case flag of
   ArgumentOutOfRangeException -> "Bad language code: " ++ msg
   LanguageDetectionError -> "Unable to detect language: " ++ msg
   ArgumentException -> "Renewing expired token..."
   e -> show e ++ ": " ++ msg
+
+renderLanguageNames :: AppState -> String
+renderLanguageNames (AppState (Language fL) (Language tL) _ m _) =
+  case (fName, tName) of
+    (Just f, Just t) -> f ++ "|" ++ t
+    _ -> ""
+  where fName = M.lookup fL m
+        tName = M.lookup tL m
