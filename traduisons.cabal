@@ -102,6 +102,7 @@ library
     build-depends:     base
                      , aeson
                      , bytestring
+                     , containers
                      , HTTP
                      , http-client
                      , http-client-tls
@@ -109,6 +110,7 @@ library
                      , mtl
                      , process
                      , split
+                     , text
                      , time
                      , utf8-string
 
