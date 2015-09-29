@@ -16,6 +16,7 @@ newtype Traduisons a = Traduisons {
   unTraduisons :: ReaderT TraduisonsState (ExceptT TraduisonsError IO) a }
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader TraduisonsState,
             MonadError TraduisonsError)
+-- this is good
 
 -- | The failure modes and their descriptions.
 data TraduisonsError = TErr TraduisonsErrorFlag String

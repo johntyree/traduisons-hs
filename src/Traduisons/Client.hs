@@ -26,7 +26,7 @@ createAppState = liftIO mkTraduisonsState >>= new
 updateLanguageMap :: AppState -> ExceptT TraduisonsError IO AppState
 updateLanguageMap appState = do
   let tState = asTraduisonsState appState
-  langResponse <- lift $ runTraduisons tState getLanguagesForTranslate
+  langResponse <- lift $ runTraduisons tState getLanguagesForTranslate -- unfuck this and replace with the library I added.
   langs <- M.insert "auto" "auto" <$> liftEither langResponse
   return appState { asLanguageNameCodes = langs }
 

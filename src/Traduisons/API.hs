@@ -2,7 +2,6 @@
 
 module Traduisons.API ( authorizedRequest
                       , detectLanguage
-                      , getLanguagesForTranslate
                       , mkTraduisonsState
                       , newState
                       , renewToken
@@ -31,16 +30,6 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import Traduisons.Resources
 import Traduisons.Types
 import Traduisons.Util
-
-
--- | A lookup table from code to language *and* language to code. We're
--- assuming that there are no language names that are also ISO 639-1 codes.
-getLanguagesForTranslate :: Traduisons (M.Map String String)
-getLanguagesForTranslate = do
-  codes <- authorizedRequest languageCodeListURL [] >>= validateResponse
-  let options = [("locale", "en-US"), ("languageCodes", show codes)]
-  names <- authorizedRequest languageNameListURL options >>= validateResponse
-  return $ M.fromList (zip (codes ++ names) (names ++ codes))
 
 -- | Detect the language of a body of text
 detectLanguage :: String -> Traduisons Language

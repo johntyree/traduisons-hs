@@ -8,6 +8,15 @@ A Haskell port of http://github.com/johntyree/traduisons.
 
 ## Installation
 
+### Qt dependencies
+
+#### Ubuntu
+
+```
+$ sudo apt-get install qt5-default qtdeclarative5-dev
+```
+
+### Building the Haskell bits
 Use stack. Really. If you don't want to use stack, you're on your own for now.
 
 ```
